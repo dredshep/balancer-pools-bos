@@ -80,13 +80,10 @@ const VerticalPair = ({ title, value, end }) => {
 
 return (
   <div
-    // className="bg-secondary"
+    className="bg-secondary"
     style={{
       paddingTop: "1rem",
       paddingBottom: "1rem",
-      // Gradient from 0F1023 to 3A215E
-      background:
-        "linear-gradient(90deg, rgba(15,16,35,1) 0%, rgba(58,33,94,1) 100%)",
     }}
   >
     <div
@@ -100,21 +97,19 @@ return (
       <div
         className="d-flex flex-column gap-3"
         style={{
-          maxWidth: "450px",
+          maxWidth: "375px",
         }}
       >
         {poolInfo.map((pool) => (
-          // increase inner margins
-          <div
-            key={pool.id}
-            className="card bg-dark text-light rounded-4 shadow border-0 p-3"
-            style={{
-              // brightness up by 10%
-              filter: "brightness(110%)",
-            }}
-          >
+          <div className="card bg-dark text-light" key={pool.id} style={{}}>
             <div className="card-header">
-              <h5 className="card-title">
+              <h5
+                className="card-title"
+                style={{
+                  marginTop: "0.4rem",
+                  marginBottom: "0.3rem",
+                }}
+              >
                 {pool.tokens.map((t) => t.symbol).join(" / ")}
               </h5>
             </div>
@@ -187,23 +182,21 @@ return (
                     </div>
                     <div className="d-flex justify-content-end">
                       <button
-                        // className="btn btn-secondary me-2 fw-bold"
-                        className="btn btn-lg btn-danger me-3 fw-bold border-0"
+                        className="btn btn-secondary me-2 fw-bold"
                         style={{
                           letterSpacing: "0.033em",
                           // desaturate completely and lighten by 50%
-                          // filter: "saturate(0%) brightness(95%)",
+                          filter: "saturate(0%) brightness(95%)",
                         }}
                       >
                         Unstake
                       </button>
                       <button
-                        // className="btn btn-lg btn-primary fw-bold"
-                        className="btn btn-lg btn-success fw-bold border-0"
+                        className="btn btn-primary fw-bold"
                         style={{
                           letterSpacing: "0.033em",
-                          // filter:
-                          //   "hue-rotate(40deg) saturate(80%) brightness(104%)",
+                          filter:
+                            "hue-rotate(40deg) saturate(80%) brightness(104%)",
                         }}
                       >
                         Stake

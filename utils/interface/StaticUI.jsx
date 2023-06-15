@@ -141,16 +141,19 @@ return (
                       value={`${pool.mngmtFee}%`}
                     />
                     <table
-                      className="table table-sm table-transparent text-light table-borderless"
+                      className="table table-sm table-transparent text-light border-secondary"
                       style={{
                         // max size is like 150px
                         maxWidth: "200px",
+                        marginTop: "-0.25rem",
                       }}
                     >
                       <thead>
                         <tr>
-                          <th>Token</th>
-                          <th>Weight</th>
+                          {/* uppercase font secondary */}
+                          <th className="fw-bold">Token</th>
+                          {/* uppercase font secondary */}
+                          <th className="fw-bold">Weight</th>
                         </tr>
                       </thead>
                       <tbody>

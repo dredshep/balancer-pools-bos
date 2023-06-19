@@ -101,7 +101,7 @@ Sec-Fetch-Site: same-origin
 Sec-GPC: 1
 
 data: {"query":"{\n  balancers(first: 3) {\n    id\n    poolCount\n    totalLiquidity\n  }\n  pools(first: 10) {\n    id\n    tokens {\n      id\n      balance\n    }\n  }\n}","variables":null,"extensions":{"headers":null}}
-url: https://api.studio.thegraph.com/query/24660/balancer-polygon-zkevm-v2/v0.0.2
+url: https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest
 */
 
 async function getPoolData() {
@@ -122,7 +122,7 @@ async function getPoolData() {
 		}
 	`;
   const url =
-    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zkevm-v2/v0.0.2";
+    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
   const options = {
     method: "POST",
     headers: {

@@ -15,7 +15,7 @@ function getTokenPrice(poolTokenId) {
     body: JSON.stringify({ query }),
   };
   const url =
-    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zkevm-v2/v0.0.2";
+    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
   const { body } = fetch(url, options);
   return body.data.poolToken.priceRate;
 }

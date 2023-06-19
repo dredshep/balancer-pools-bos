@@ -187,23 +187,21 @@ return (
                     </div>
                     <div className="d-flex justify-content-end">
                       <button
-                        // className="btn btn-secondary me-2 fw-bold"
-                        className="btn btn-lg btn-danger me-3 fw-bold border-0"
+                        className="btn btn-lg btn-secondary me-3 fw-bold border-0"
                         style={{
                           letterSpacing: "0.033em",
                           // desaturate completely and lighten by 50%
-                          // filter: "saturate(0%) brightness(95%)",
+                          filter: "saturate(0%) brightness(100%)",
                         }}
                       >
                         Unstake
                       </button>
                       <button
-                        // className="btn btn-lg btn-primary fw-bold"
-                        className="btn btn-lg btn-success fw-bold border-0"
+                        className="btn btn-lg btn-primary fw-bold border-0"
                         style={{
                           letterSpacing: "0.033em",
-                          // filter:
-                          //   "hue-rotate(40deg) saturate(80%) brightness(104%)",
+                          filter:
+                            "hue-rotate(40deg) saturate(80%) brightness(115%)",
                         }}
                       >
                         Stake

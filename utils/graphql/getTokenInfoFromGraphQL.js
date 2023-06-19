@@ -27,7 +27,7 @@ sample response:
 */
 
 const url =
-  "https://api.studio.thegraph.com/query/24660/balancer-polygon-zkevm-v2/v0.0.2";
+  "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
 
 /**
  * @typedef {Object} Token
@@ -56,6 +56,8 @@ async function getTokenInfoFromGraphQL(id) {
         name
         latestPrice {
           id
+          pricingAsset
+          price
         }
         latestUSDPrice
         address
@@ -76,9 +78,15 @@ async function getTokenInfoFromGraphQL(id) {
 
 // Example usage:
 const token = getTokenInfoFromGraphQL(
-  // tether
+  // wbtc NOT ZKEVM
+  // "0xf4eb217ba2454613b15dbdea6e5f22276410e89e"
+
+  // tether ZKEVM
   // "0x1e4a5963abfd975d8c9021ce480b42188849d41d"
-  // wbtc
-  "0xf4eb217ba2454613b15dbdea6e5f22276410e89e"
+  // bb-o-USDT ZKEVM <-- main reference, priced by bb-o-USD
+  // "0x4b718e0e2fea1da68b763cd50c446fba03ceb2ea"
+  // bb-o-USD ZKEVM <-- reference for bb-o-USDT
+  "0xe274c9deb6ed34cfe4130f8d0a8a948dea5bb286"
 );
-console.log(token);
+// console.log(token);
+return <pre>{JSON.stringify(token, null, 2)}</pre>;

@@ -79,7 +79,7 @@ function getPoolData() {
 		}
 	`;
   const url =
-    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zkevm-v2/v0.0.2";
+    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
   const options = {
     method: "POST",
     headers: {

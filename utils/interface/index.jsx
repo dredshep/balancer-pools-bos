@@ -70,6 +70,73 @@ const HoverDiv = styled.div`
   }
 `;
 
+function getTokenPrice(poolTokenId) {
+  // sample url: // https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest/graphql?query=%7B%0A++balancers%28first%3A+3%29+%7B%0A++++id%0A++++poolCount%0A++++totalLiquidity%0A++++pools+%7B%0A++++++id%0A++++%7D%0A++%7D%0A++pools%28first%3A+10%2C+order%3A+%7B+desc%3A+balance+%7D%29+%7B%0A++++id%0A++++tokens+%7B%0A++++++id%0A++++++balance%0A++++++%0A++++%7D%0A++%7D%0A++poolToken%28id%3A+%220x5480b5f610fa0e11e66b42b977e06703c07bc5cf000200000000000000000008-0x120ef59b80774f02211563834d8e3b72cb1649d6%22%29+%7B%0A++++priceRate%0A++%7D%0A%7D%0A
+  // we just need poolToken(id: "poolTokenId") { priceRate }
+
+  const query = `{
+    poolToken(id: "${poolTokenId}") {
+      priceRate
+    }
+  }`;
+  const options = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  };
+  const url =
+    "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
+  const { body } = fetch(url, options); // this returns a synchronous fetch, not a promise
+  return body.data.poolToken.priceRate;
+}
+
+const usePoolData = () => {
+  // This is a mock of the data that would be returned from the API
+  /*
+  fetch from graphql
+  {
+  balancers(first: 3) {
+    # right now there's only one balancer, id is "2", and it has 23 pools
+    id
+    poolCount
+    totalLiquidity
+    pools {
+      id
+    }
+  }
+  pools(first: 10, order: { desc: balance }) {
+    id
+    # list of all tokens in the pool
+    tokens {
+      # id if each pool token, its syntax is "poolId-TokenId" = poolTokenId
+      id
+      balance
+      cashBalance
+      
+    }
+  }
+  # this is the id of a pool token, we request it when we have all the pools, so we can get the priceRate of each pool token
+  poolToken(id: "0x5480b5f610fa0e11e66b42b977e06703c07bc5cf000200000000000000000008-0x120ef59b80774f02211563834d8e3b72cb1649d6") {
+    priceRate
+  }
+}
+
+  */
+  const poolData = {
+    ETH: {
+      ImageUrl: "/media/20646/eth_logo.png",
+    },
+    DAI: {
+      ImageUrl: "/media/1383670/dai.png",
+    },
+    BTC: {
+      ImageUrl: "/media/19633/btc.png",
+    },
+  };
+
+  return { poolData };
+};
+
 function PoolList({ pools, userBalance }) {
   const colors = {
     darkGray200: "#2c2c2c",

@@ -228,26 +228,6 @@ function calculateTokenWeights(pool) {
   return weights;
 }
 
-/*make typedef for
-
-const transformedPools: {
-    totalValueLocked: string;
-    tokenWeights: {
-        address: string;
-        weight: string;
-    }[];
-    id: string;
-    address: string;
-    tokensList: string[];
-    totalWeight: string;
-    totalShares: string;
-    holdersCount: string;
-    poolType: string;
-    poolTypeVersion: number;
-    tokens: Token[];
-}[]
-*/
-
 /**
  * @typedef {Object} TokenWeights
  * @property {string} address

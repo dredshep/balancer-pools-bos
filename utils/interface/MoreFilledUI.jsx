@@ -18,56 +18,19 @@ const url =
   "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
 
 /**
- * @typedef {Object} SBalancer
- * @property {string} id
- * @property {number} poolCount
- * @property {string} totalLiquidity
+ * @description Fetches a URL and returns the body string synchronously
+ * @param {string} url - The URL to fetch
+ * @returns {string} The body string
+ * @example const body = fetchSync("https://example.com");
  */
+function fetchGetSync(url) {
+  // @ts-ignore
+  return fetch(url).body;
+}
 
-/**
- * @typedef {Object} SToken
- * @property {string} name
- * @property {string} symbol
- * @property {string} address
- * @property {number} decimals
- * @property {string} totalBalanceUSD
- * @property {string} totalBalanceNotional
- * @property {string} totalVolumeUSD
- * @property {string} totalVolumeNotional
- * @property {string|null} latestUSDPrice
- * @property {SLatestPrice|null} latestPrice
- */
-
-/**
- * @typedef {Object} SLatestPrice
- * @property {string} pricingAsset
- * @property {string} price
- * @property {SPoolId} poolId
- */
-
-/**
- * @typedef {Object} SPoolId
- * @property {string} totalWeight
- */
-
-/**
- * @typedef {Object} SPool
- * @property {string} id
- * @property {string} address
- * @property {string[]} tokensList
- * @property {string} totalWeight
- * @property {string} totalShares
- * @property {string} holdersCount
- * @property {string} poolType
- * @property {number} poolTypeVersion
- * @property {{token: SToken}[]} tokens
- */
-
-/**
- * @typedef {Object} SBalancerGQLResponse
- * @property {SBalancer[]} balancers
- * @property {SPool[]} pools
- */
+const abi = fetchGetSync(
+  "https://raw.githubusercontent.com/dredshep/dev/main/abi.json"
+);
 
 function getGraphQlQuerySync(query) {
   const options = {
@@ -229,35 +192,6 @@ function calculateTokenWeights(pool) {
 }
 
 /**
- * @typedef {Object} TokenWeights
- * @property {string} address
- * @property {string} weight
- */
-
-/**
- * @typedef {Object} TransformedPool
- * @property {string} totalValueLocked
- * @property {TokenWeights[]} tokenWeights
- * @property {string} id
- * @property {string} address
- * @property {string[]} tokensList
- * @property {string} totalWeight
- * @property {string} totalShares
- * @property {string} holdersCount
- * @property {string} poolType
- * @property {number} poolTypeVersion
- * @property {SToken[]} tokens
- */
-
-/**
- * @typedef {Object} TransformedData
- * @property {SBalancerGQLResponse["balancers"]} balancers
- * @property {TransformedPool[]} pools
- * @example const data = getTransformedData();
- * console.log(data);
- */
-
-/**
  * @name getTransformedData
  * @description Get the transformed data from the Balancer subgraph data and the calculations
  * @returns {TransformedData}
@@ -321,8 +255,191 @@ const VerticalPair2 = ({ title, value, end }) => {
   );
 };
 
+// for each pool, check if the user has approved the pool to spend their tokens
+// if not, show a button to approve the pool, and then show the 2 buttons for depositing and withdrawing
+// while it checks whether it's approved or not, show a rotating loading button made with styled components
+
+State.init({
+  // type is not really useable like this but it's to show what it is.
+  /** @type {StatePool[]} */
+  statePools: [],
+});
+
+/**
+ * @description Handle the approve press button
+ * @param {string} poolId
+ * @param {string} tokenAddress
+ * @param {number} tokenDecimals
+ */
+const handleApprove = (tokenAddress, amount) => {
+  if (!tokenAddress || !amount || hasError) return;
+
+  // if (state.actionTabs == "repay") {
+  //   if (amount > state.borrowedAmount) {
+  //     State.update({ hasError: 3 });
+  //     return;
+  //   }
+  // } else if (state.actionTabs == "deposit") {
+  //   if (amount > state.balance) {
+  //     State.update({ hasError: 1 });
+  //     return;
+  //   }
+  // }
+
+  const erc20 = new ethers.Contract(
+    tokenAddress, // address
+    EIP20InterfaceABI, // erc20 abi
+    Ethers.provider().getSigner()
+  );
+
+  const toBigNumber = BigNumberToken(
+    amount,
+    TokensDetail[tokenAddress].decimals
+  );
+
+  erc20
+    .approve(tokenAddress, toBigNumber)
+    .then((transaction) => {
+      console.log("Transaction sent:", transaction.hash);
+      State.update({ hasError: -1 });
+      return transaction.wait();
+    })
+    .then((receipt) => {
+      State.update({ hasError: 0 });
+      State.update({ success: true });
+      console.log("Transaction mined, receipt:", receipt);
+    })
+    .catch((error) => {
+      State.update({ hasError: 5, errorMessage: error });
+      console.log("Error in mint function:", error);
+    });
+};
+
+/**
+ * @description Get the user's balance in a pool
+ * @param {string} poolAddress
+ * @param {string} userAddress
+ * @returns {string} The user's balance in the pool
+ */
+function getUserBalance(poolAddress, userAddress) {
+  const erc20 = new ethers.Contract(
+    poolAddress, // address
+    ERC20InterfaceABI, // erc20 abi
+    Ethers.provider().getSigner()
+  );
+
+  const balance = erc20.balanceOf(userAddress).then((balance) => {
+    // undo big number into a string
+    return ethers.utils.formatUnits(balance, 18);
+  });
+  return balance;
+}
+
+/**
+ * @description Handle the balancer pool deposit operation
+ * @param {string} poolAddress
+ * @param {string} tokenAddress
+ * @param {number} tokenDecimals
+ * @param {string} amount
+ */
+function handleDeposit(poolAddress, tokenAddress, tokenDecimals, amount) {
+  /*    
+  function joinPool(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        JoinPoolRequest memory request
+    ) external payable;
+
+    struct JoinPoolRequest {
+        // [ASSET_A, ASSET_B] - MUST BE SORTED ALPHABETICALLY
+        address[] assets;
+        // [ASSET_A_AMOUNT, ASSET_B_AMOUNT]
+        uint256[] maxAmountsIn;
+        bytes userData;
+        // false
+        bool fromInternalBalance;
+    }
+
+    // Create the Vault contract
+    // const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider)
+
+
+    const types = ['uint256', 'uint256[]', 'uint256'];
+    // [EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, minimumBPT];
+    const data = [ARRAY_OF_TOKENS_IN, ARRAY_OF_TOKENS_IN_AMOUNT, 0];
+    const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
+
+    // Exact Tokens Join
+    // userData ABI
+    // ['uint256', 'uint256[]', 'uint256']
+    // userData
+    
+    https://docs.balancer.fi/reference/joins-and-exits/pool-joins.html#userdata
+    
+        function exitPool(
+        bytes32 poolId,
+        address sender,
+        address payable recipient,
+        ExitPoolRequest memory request
+    ) external;
+
+    struct ExitPoolRequest {
+        address[] assets;
+        uint256[] minAmountsOut;
+        bytes userData;
+        bool toInternalBalance;
+    }
+
+    enum ExitKind {
+        EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, // 0
+        EXACT_BPT_IN_FOR_TOKENS_OUT, // 1
+        BPT_IN_FOR_EXACT_TOKENS_OUT, // 2
+        MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
+    }
+
+    // BPT = Balancer Pool Token
+    const types = ['uint256', 'uint256', 'uint256'];
+    // [EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, bptAmountIn, exitTokenIndex];
+    const data = [0, BPT_AMOUNT_IN, 0];
+    const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
+  */
+}
+
+/**
+ * @description Handle the deposit press button
+ * @param {string} poolId
+ * @param {string} tokenAddress
+ * @param {number} tokenDecimals
+ */
+function handleInitDeposit(poolId, tokenAddress, tokenDecimals) {
+  // deposit logic
+  // set state to loading
+  // call deposit function
+  // .then set state to not loading
+  // .catch show error message
+  // if success, show success message
+}
+
+/**
+ * @description Handle the withdraw press button
+ * @param {string} poolId
+ * @param {string} tokenAddress
+ * @param {number} tokenDecimals
+ */
+function handleInitWithdraw(poolId, tokenAddress, tokenDecimals) {
+  // withdraw logic
+  // set state to loading
+  // call withdraw function
+  // .then set state to not loading
+  // .catch show error message
+  // if success, show success message
+}
+
 try {
   let data;
+  /** @type {StatePool[]} */
+  const statePools = state.statePools;
   try {
     data = getTransformedData();
   } catch (error) {

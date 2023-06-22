@@ -3,6 +3,11 @@ declare const State: {
   update(obj: object): void;
 };
 
+declare const Web3Connect: any;
+declare const Ethers: any;
+declare const ethers: any;
+declare const state: any;
+
 // interface SBalancer {
 //   id: string;
 //   poolCount: number;
@@ -108,8 +113,3 @@ declare const State: {
 // }
 
 // declare generic react component <Web3Connect />
-declare const Web3Connect: any;
-declare const Ethers: any;
-declare const ethers: any;
-
-declare const state: any;

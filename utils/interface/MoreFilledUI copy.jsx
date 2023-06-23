@@ -585,40 +585,6 @@ function CurrencySelector({ data, poolAddress }) {
   );
 }
 
-/**
- * @param {string} poolAddress
- */
-function handleClickCurrencySelector(poolAddress) {
-  /** @type {CurrencySelector} */
-  const currencySelector = state.currencySelectors[poolAddress];
-  console.log("clicked open currency selector");
-  // check if open
-  // if open, close
-  if (currencySelector[poolAddress].enabled) {
-    // disable in state
-    State.update({
-      currencySelectors: {
-        ...currencySelector,
-        [poolAddress]: {
-          ...currencySelector[poolAddress],
-          enabled: false,
-        },
-      },
-    });
-    return;
-  }
-  // enable in state
-  State.update({
-    currencySelectors: {
-      ...currencySelector,
-      [poolAddress]: {
-        ...currencySelector[poolAddress],
-        enabled: true,
-      },
-    },
-  });
-}
-
 try {
   // @ts-ignore
   return (

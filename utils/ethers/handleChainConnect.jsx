@@ -1,17 +1,111 @@
 //@ts-check
 
-/** @typedef {Object} SBalancer @property {string} id @property {number} poolCount @property {string} totalLiquidity */
-/** @typedef {Object} SToken @property {string} name @property {string} symbol @property {string} address @property {number} decimals @property {string} totalBalanceUSD @property {string} totalBalanceNotional @property {string} totalVolumeUSD @property {string} totalVolumeNotional @property {string | null} latestUSDPrice @property {SLatestPrice | null} latestPrice */
-/** @typedef {Object} SLatestPrice @property {string} pricingAsset @property {string} price @property {SPoolId} poolId */
-/** @typedef {Object} SPoolId @property {string} totalWeight */
-/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
-/** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
-/** @typedef {Object} TokenWeights @property {string} address @property {string} weight */
-/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
-/** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
-/** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
-/** @typedef {Object} ChainInfo @property {string} name @property {string} chainId @property {string} shortName @property {string} chain @property {string} network @property {string} networkId @property {{ name: string, symbol: string, decimals: number }} nativeCurrency @property {string[]} rpc @property {string[]} faucets @property {string[]} explorers */
-/** @typedef {Object.<string, ChainInfo>} ChainInfoObject */
+/**
+ * @typedef {Object} SBalancer
+ * @property {string} id
+ * @property {number} poolCount
+ * @property {string} totalLiquidity
+ */
+
+/**
+ * @typedef {Object} SToken
+ * @property {string} name
+ * @property {string} symbol
+ * @property {string} address
+ * @property {number} decimals
+ * @property {string} totalBalanceUSD
+ * @property {string} totalBalanceNotional
+ * @property {string} totalVolumeUSD
+ * @property {string} totalVolumeNotional
+ * @property {string | null} latestUSDPrice
+ * @property {SLatestPrice | null} latestPrice
+ */
+
+/**
+ * @typedef {Object} SLatestPrice
+ * @property {string} pricingAsset
+ * @property {string} price
+ * @property {SPoolId} poolId
+ */
+
+/**
+ * @typedef {Object} SPoolId
+ * @property {string} totalWeight
+ */
+
+/**
+ * @typedef {Object} SPool
+ * @property {string} id
+ * @property {string} address
+ * @property {string[]} tokensList
+ * @property {string} totalWeight
+ * @property {string} totalShares
+ * @property {string} holdersCount
+ * @property {string} poolType
+ * @property {number} poolTypeVersion
+ * @property {{ token: SToken }[]} tokens
+ */
+
+/**
+ * @typedef {Object} SBalancerGQLResponse
+ * @property {SBalancer[]} balancers
+ * @property {SPool[]} pools
+ */
+
+/**
+ * @typedef {Object} TokenWeights
+ * @property {string} address
+ * @property {string} weight
+ */
+
+/**
+ * @typedef {Object} TransformedPool
+ * @property {string} totalValueLocked
+ * @property {TokenWeights[]} tokenWeights
+ * @property {string} id
+ * @property {string} address
+ * @property {string[]} tokensList
+ * @property {string} totalWeight
+ * @property {string} totalShares
+ * @property {string} holdersCount
+ * @property {string} poolType
+ * @property {number} poolTypeVersion
+ * @property {SToken[]} tokens
+ */
+
+/**
+ * @typedef {Object} TransformedData
+ * @property {SBalancer[]} balancers
+ * @property {TransformedPool[]} pools
+ */
+
+/**
+ * @typedef {Object} StatePool
+ * @property {string} id
+ * @property {boolean} approved
+ * @property {boolean} depositing
+ * @property {boolean} withdrawing
+ * @property {boolean} approving
+ * @property {boolean} loading
+ */
+
+/**
+ * @typedef {Object} ChainInfo
+ * @property {string} name
+ * @property {string} chainId
+ * @property {string} shortName
+ * @property {string} chain
+ * @property {string} network
+ * @property {string} networkId
+ * @property {{ name: string, symbol: string, decimals: number }} nativeCurrency
+ * @property {string[]} rpc
+ * @property {string[]} faucets
+ * @property {string[]} explorers
+ */
+
+/**
+ * @typedef {Object.<string, ChainInfo>} ChainInfoObject
+ */
 
 State.init({
   // {poolAddress,balance}

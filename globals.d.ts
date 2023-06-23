@@ -7,6 +7,9 @@ declare const Web3Connect: any;
 declare const Ethers: any;
 declare const ethers: any;
 declare const state: any;
+declare const DropdownMenu: any;
+declare const RadioGroup: any;
+// declare const ButtonGroup: any;
 
 // interface SBalancer {
 //   id: string;

@@ -1,68 +1,17 @@
 // @ts-check
 
-// zkEVM addresses
-// const knownAddresses = {
-//   /** main reference, priced by bb-o-USD */ "bb-o-USDT":
-//     "0x4b718e0e2fea1da68b763cd50c446fba03ceb2ea",
-//   /** reference for bb-o-USDT*/ "bb-o-USD":
-//     "0xe274c9deb6ed34cfe4130f8d0a8a948dea5bb286",
-//   /** NOT a reference, priced by bb-o-USD */ USDT: "0x1e4a5963abfd975d8c9021ce480b42188849d41d",
-//   /** reference for USDC */ "bb-o-USDC":
-//     "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
-//   /** priced by bb-o-USDC*/ USDC: "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
-//   /** reference for WETH, circular pricing */ "B-wstETH-STABLE":
-//     "0xe1f2c039a68a216de6dd427be6c60decf405762a",
-//   /** priced by B-wstETH-STABLE, circular pricing*/ WETH: "0x4f9a0e7fd2bf6067db6994cf12e4495df938e6e9",
-// };
-
-// for each pool, check if the user has approved the pool to spend their tokens
-// if not, show a button to approve the pool, and then show the 2 buttons for depositing and withdrawing
-// while it checks whether it's approved or not, show a rotating loading button made with styled components
-
-/**
- * @typedef {{
- * poolAddress: string,
- * hasError: number,
- * errorMessage: string,
- * inputAmount: string,
- * }} StakeForm
- */
-
-// make CurrencySelectee with only token address and enabled, no pool address
-/**
- * @typedef {{
- * selectedTokenAddress: string,
- * enabled: boolean,
- * }} CurrencySelectee
- */
-
-/**
- * @typedef {{ [address: string]: CurrencySelectee }} CurrencySelector
- */
-
-/**
- * @typedef {{
- * checkedChainInfo: boolean,
- * userBalances: [],
- * chainId: string,
- * chainName: string,
- * errorWrongNetwork: boolean,
- * currencySelectors: CurrencySelector,
- * }} StateType
- */
-
-const url =
+const graphQlUri =
   "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
 
 /**
  * @description Fetches a URL and returns the body string synchronously
- * @param {string} url - The URL to fetch
+ * @param {string} graphQlUri - The URL to fetch
  * @returns {string} The body string
  * @example const body = fetchSync("https://example.com");
  */
-function fetchGetSync(url) {
+function fetchGetSync(graphQlUri) {
   // @ts-ignore
-  return fetch(url).body;
+  return fetch(graphQlUri).body;
 }
 
 const abi = fetchGetSync(
@@ -76,7 +25,7 @@ function getGraphQlQuerySync(query) {
     body: JSON.stringify({ query }),
   };
   // @ts-ignore
-  const { body } = fetch(url, options);
+  const { body } = fetch(graphQlUri, options);
   return body.data;
 }
 
@@ -268,7 +217,7 @@ function getTransformedData() {
   return transformedData;
 }
 
-const VerticalPair2 = ({ title, value, end }) => {
+const VerticalPair3 = ({ title, value, end }) => {
   const isEnd = !!end;
   return (
     <div className="d-flex flex-column">
@@ -293,236 +242,16 @@ const VerticalPair2 = ({ title, value, end }) => {
 };
 
 /**
- * @description Handle the approve press button
- * @param {string} tokenAddress
- * @param {number} amount
- * @param {number} decimals
- */
-const handleApprove = (tokenAddress, amount, decimals) => {
-  // if (!tokenAddress || !amount || hasError) return;
-  if (!tokenAddress || !amount || !decimals) return;
-
-  const erc20 = new ethers.Contract(
-    tokenAddress, // address
-    abi, // erc20 abi
-    Ethers.provider().getSigner()
-  );
-
-  // amount is string float, make it a big number
-  const toBigNumber = ethers.utils.parseUnits(amount, decimals);
-
-  erc20
-    .approve(tokenAddress, toBigNumber)
-    .then((transaction) => {
-      console.log("Transaction sent:", transaction.hash);
-      State.update({ hasError: -1 });
-      return transaction.wait();
-    })
-    .then((receipt) => {
-      State.update({ hasError: 0 });
-      State.update({ success: true });
-      console.log("Transaction mined, receipt:", receipt);
-    })
-    .catch((error) => {
-      State.update({ hasError: 5, errorMessage: error });
-      console.log("Error in mint function:", error);
-    });
-};
-
-/**
- * @description Handle the balancer pool deposit operation
- * @param {string} poolAddress
- * @param {string} tokenAddress
- * @param {number} tokenDecimals
- * @param {string} amount
- */
-function handleDeposit(poolAddress, tokenAddress, tokenDecimals, amount) {
-  /*    
-  function joinPool(
-        bytes32 poolId,
-        address sender,
-        address recipient,
-        JoinPoolRequest memory request
-    ) external payable;
-
-    struct JoinPoolRequest {
-        // [ASSET_A, ASSET_B] - MUST BE SORTED ALPHABETICALLY
-        address[] assets;
-        // [ASSET_A_AMOUNT, ASSET_B_AMOUNT]
-        uint256[] maxAmountsIn;
-        bytes userData;
-        // false
-        bool fromInternalBalance;
-    }
-
-    // Create the Vault contract
-    // const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider)
-
-
-    const types = ['uint256', 'uint256[]', 'uint256'];
-    // [EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, minimumBPT];
-    const data = [ARRAY_OF_TOKENS_IN, ARRAY_OF_TOKENS_IN_AMOUNT, 0];
-    const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
-
-    // Exact Tokens Join
-    // userData ABI
-    // ['uint256', 'uint256[]', 'uint256']
-    // userData
-    
-    https://docs.balancer.fi/reference/joins-and-exits/pool-joins.html#userdata
-    
-        function exitPool(
-        bytes32 poolId,
-        address sender,
-        address payable recipient,
-        ExitPoolRequest memory request
-    ) external;
-
-    struct ExitPoolRequest {
-        address[] assets;
-        uint256[] minAmountsOut;
-        bytes userData;
-        bool toInternalBalance;
-    }
-
-    enum ExitKind {
-        EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, // 0
-        EXACT_BPT_IN_FOR_TOKENS_OUT, // 1
-        BPT_IN_FOR_EXACT_TOKENS_OUT, // 2
-        MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
-    }
-
-    // BPT = Balancer Pool Token
-    const types = ['uint256', 'uint256', 'uint256'];
-    // [EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, bptAmountIn, exitTokenIndex];
-    const data = [0, BPT_AMOUNT_IN, 0];
-    const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
-  */
-}
-
-/**
- * @description Handle the deposit press button
- * @param {string} poolId
- * @param {string} tokenAddress
- * @param {number} tokenDecimals
- */
-function handleInitDeposit(poolId, tokenAddress, tokenDecimals) {
-  // deposit logic
-  // set state to loading
-  // call deposit function
-  // .then set state to not loading
-  // .catch show error message
-  // if success, show success message
-}
-
-/**
- * @description Handle the withdraw press button
- * @param {string} poolId
- * @param {string} tokenAddress
- * @param {number} tokenDecimals
- */
-function handleInitWithdraw(poolId, tokenAddress, tokenDecimals) {
-  // withdraw logic
-  // set state to loading
-  // call withdraw function
-  // .then set state to not loading
-  // .catch show error message
-  // if success, show success message
-}
-
-function handleStakeClick(poolAddress) {
-  console.log("clicked stake");
-  // enable in state
-  State.update({
-    stakeForms: {
-      ...state.stakeForms,
-      [poolAddress]: {
-        ...state.stakeForms[poolAddress],
-        enabled: true,
-      },
-    },
-  });
-}
-
-/**
- * @param {string | number} poolAddress
- * @param {string} value
- */
-function handleStakeFormChange(poolAddress, value) {
-  console.log("stake form change", poolAddress, value);
-  // update in state
-  State.update({
-    stakeForms: {
-      ...state.stakeForms,
-      [poolAddress]: {
-        ...state.stakeForms[poolAddress],
-        inputAmount: value,
-      },
-    },
-  });
-}
-
-// function StakeForm({ poolAddress, tokenAddress, tokenDecimals }) {
-//   /** @type {StakeForm} */
-//   const formState = state.stakeForms[poolAddress];
-//   const setFormState = (/** @type {string} */ value) =>
-//     handleStakeFormChange(poolAddress, value);
-
-//   return (
-//     <div className="d-flex flex-row justify-content-center align-items-center">
-//       {/* form to select a token */}
-//       <select
-//         className="form-control form-control-sm"
-//       <input
-//         type="number"
-//         className="form-control form-control-sm"
-//         placeholder="0"
-//         value={formState.inputAmount}
-//         onChange={(e) => setFormState(e.target.value)}
-//       />
-//       <button
-//         className="btn btn-primary btn-sm ml-2"
-//         onClick={() => handleStakeClick(poolAddress)}
-//       >
-//         Stake
-//       </button>
-//     </div>
-//   );
-// }
-
-// function handleCurrencySelectorChange(poolAddress, tokenAddress) {
-//   console.log("currency selector change", poolAddress, tokenAddress);
-//   // update in state
-//   State.update({
-//     currencySelectors: {
-//       ...state.currencySelectors,
-//       [poolAddress]: {
-//         ...state.currencySelectors[poolAddress],
-//         selectedTokenAddress: tokenAddress,
-//       },
-//     },
-//   });
-// }
-
-// /**
-//  * @param {TransformedData} data
-//  * @param {string | number} poolAddress
-//  */
-// function getTokenListFromPoolAddress(data, poolAddress) {
-//   return data.pools.find((pool) => pool.address === poolAddress)?.tokens;
-// }
-
-/**
  * @param {TransformedData} data
  * @returns {{ [tokenAddress: string]: TransformedPool }}
  */
-const getIndexedPoolAddresses = (/** @type {TransformedData} */ data) =>
+const getIndexedPoolAddresses2 = (/** @type {TransformedData} */ data) =>
   data.pools.reduce((acc, pool) => {
     acc[pool.address] = pool;
     return acc;
   }, {});
 
-const getIndexedTokenAddresses = (/** @type {TransformedData} */ data) => {
+const getIndexedTokenAddresses2 = (/** @type {TransformedData} */ data) => {
   /** @type {{ [tokenAddress: string]: {pools: TransformedPool[], token: SToken} }} */
   const indexedTokenAddresses = {};
   data.pools.forEach((pool) => {
@@ -538,10 +267,89 @@ const getIndexedTokenAddresses = (/** @type {TransformedData} */ data) => {
   });
   return indexedTokenAddresses;
 };
+const transformedData = getTransformedData();
+const indexedTokenAddresses = getIndexedTokenAddresses2(transformedData);
+const indexedPoolAddresses = getIndexedPoolAddresses2(transformedData);
+
+/**
+ * Form for a single token in the pool.
+ * @typedef {Object} OneForm
+ * @property {string} inputAmount - User input amount for the token in the pool.
+ * @property {string} symbol - Self-explanatory.
+ * @property {boolean} isSelected - Indicates whether the token is selected.
+ */
+
+/**
+ * Form for the "all" token in the pool.
+ * @typedef {Object} AllForm
+ * @property {string} totalAmount - Total amount for the "all" token in the pool.
+ */
+
+/**
+ * Forms object for the currency selector. There's one per pool address, and inside we'll have a mini form per token in the "one", and a form for the "all".
+ * @typedef {Object} CurrencySelectorGroup
+ * @property {"all" | "one"} allOrOne - Indicates whether the form is for "all" or "one" tokens in the pool.
+ * @property {AllForm} allForm - Form for the "all" token in the pool.
+ * @property {Object.<string, OneForm>} oneForms - Forms for each token in the pool.
+ * @property {boolean} tokenSelectorIsOpen - Indicates whether the token selector dropdown is open.
+ */
+
+/**
+ * Forms object for the currency selector. There's one per pool address, and inside we'll have a mini form per token in the "one", and a form for the "all".
+ * @typedef {Object.<string, CurrencySelectorGroup>} CurrencySelectorFormGroupsObject
+ */
+
+/**
+ * Object containing forms for the currency selector.
+ * @type {CurrencySelectorFormGroupsObject}
+ */
+const forms = {
+  // for the currency selector, there's one per pool address, and inside we'll have a mini form per token in the "one", and a form for the "all"
+  // so we'll have a form for each token in the pool, and a form for the "all" in the pool
+  ...Object.keys(indexedPoolAddresses).reduce(
+    (
+      /** @type {CurrencySelectorFormGroupsObject} */
+      acc,
+      /** @type {string} */
+      poolAddress
+    ) => {
+      // just instantiate
+      acc[poolAddress] = {
+        allOrOne: "all",
+        allForm: {
+          totalAmount: "",
+        },
+        oneForms: {
+          // now index the tokens & instantiate with inputAmount, symbol and isSelected
+          ...indexedPoolAddresses[poolAddress].tokens.reduce(
+            (
+              /** @type {Object<string, OneForm>} */
+              acc,
+              token,
+              i
+            ) => {
+              acc[token.address] = {
+                inputAmount: "",
+                symbol: token.symbol,
+                isSelected: i === 0,
+              };
+              return acc;
+            },
+            {}
+          ),
+        },
+        tokenSelectorIsOpen: false,
+      };
+      return acc;
+    },
+    {}
+  ),
+};
+State.init({
+  forms,
+});
 
 let data;
-/** @type {StatePool[]} */
-const statePools = state.statePools;
 try {
   data = getTransformedData();
 } catch (error) {
@@ -549,29 +357,129 @@ try {
   return <div>Error getting data, please refresh this tab or component</div>;
 }
 
-/** @type {{ [poolAddress: string]: CurrencySelector }} */
-const currencySelectors = state.currencySelectors;
+// abstract updater for forms
+function updateForm(
+  /** @type {string} */ poolAddress,
+  /** @type {CurrencySelectorGroup} */ newForm
+) {
+  State.update({
+    forms: {
+      ...state.forms,
+      [poolAddress]: newForm,
+    },
+  });
+}
+
+function handleRadioChange(
+  /** @type {string} */ poolAddress,
+  /** @type {"all" | "one"} */ newAllOrOne
+) {
+  /** @type {CurrencySelectorGroup} */
+  const changedForm = state.forms[poolAddress];
+  if (changedForm.allOrOne === newAllOrOne) {
+    return;
+  }
+  const formToChange = state.forms[poolAddress];
+  /** @type {CurrencySelectorGroup} */
+  const newForm = {
+    ...formToChange,
+    allOrOne: newAllOrOne,
+  };
+  updateForm(poolAddress, newForm);
+}
+
+function handleAllInputChange(
+  /** @type {string} */ poolAddress,
+  /** @type {string} */ newTotalAmount
+) {
+  /** @type {CurrencySelectorGroup} */
+  const formToChange = state.forms[poolAddress];
+  /** @type {CurrencySelectorGroup} */
+  const newForm = {
+    ...formToChange,
+    allForm: {
+      ...formToChange.allForm,
+      totalAmount: newTotalAmount,
+    },
+  };
+  updateForm(poolAddress, newForm);
+}
+
+function handleOneInputChange(
+  /** @type {string} */ poolAddress,
+  /** @type {string} */ tokenAddress,
+  /** @type {string} */ newInputAmount
+) {
+  /** @type {CurrencySelectorGroup} */
+  const formToChange = state.forms[poolAddress];
+  /** @type {CurrencySelectorGroup} */
+  const newForm = {
+    ...formToChange,
+    oneForms: {
+      ...formToChange.oneForms,
+      [tokenAddress]: {
+        ...formToChange.oneForms[tokenAddress],
+        inputAmount: newInputAmount,
+      },
+    },
+  };
+  updateForm(poolAddress, newForm);
+}
+
+function handleTokenSelect(
+  /** @type {string} */ poolAddress,
+  /** @type {string} */ tokenAddress
+) {
+  /** @type {CurrencySelectorGroup} */
+  const formToChange = state.forms[poolAddress];
+
+  /** @type {CurrencySelectorGroup} */
+  const newForm = {
+    ...formToChange,
+
+    oneForms: {
+      ...Object.keys(formToChange.oneForms).reduce(
+        (
+          /** @type {Object<string, OneForm>} */
+          acc,
+          /** @type {string} */
+          tokenAddress
+        ) => {
+          acc[tokenAddress] = {
+            ...formToChange.oneForms[tokenAddress],
+            isSelected: false,
+          };
+          return acc;
+        },
+        {}
+      ),
+      [tokenAddress]: {
+        ...formToChange.oneForms[tokenAddress],
+        isSelected: true,
+      },
+    },
+  };
+  updateForm(poolAddress, newForm);
+}
+
+function handleClickCurrencySelector(/** @type {string} */ poolAddress) {
+  /** @type {CurrencySelectorGroup} */
+  const formToChange = state.forms[poolAddress];
+  /** @type {CurrencySelectorGroup} */
+  const newForm = {
+    ...formToChange,
+    tokenSelectorIsOpen: !formToChange.tokenSelectorIsOpen,
+  };
+  updateForm(poolAddress, newForm);
+}
 
 /**
  * @param {{ poolAddress: string, data: TransformedData }} props
  */
 function CurrencySelector({ data, poolAddress }) {
-  const pools = getIndexedPoolAddresses(data);
-  const pool = pools[poolAddress];
-  const tokenList = getIndexedTokenAddresses(data);
-  // each pool can have like this: All or One in pool.allOrOne === either "all" or "one"
-  const allOrOne = pool.allOrOne;
-  function handleRadioChange(
-    /** @type {"all" | "one"} */ newAllOrOne) {
-    State.update({
-      currencySelectors: {
-        ...state.currencySelectors,
-        [poolAddress]: {
-          ...state.currencySelectors[poolAddress],
-          allOrOne: newAllOrOne,
-        },
-      },
-    });
+  /** @type {CurrencySelectorGroup} */
+  const currencySelectorGroup = state.forms[poolAddress];
+  const { allOrOne, allForm, oneForms } = currencySelectorGroup;
 
   return (
     <div>
@@ -588,28 +496,31 @@ function CurrencySelector({ data, poolAddress }) {
           onClick={() => handleClickCurrencySelector(poolAddress)}
         >
           {/* <span className="fw-bold">USDT</span> */}
-          {/* Radix radial with All or One */}
-          {/* <div>
-            <RadioGroup.Root defautValue="all">
-              <RadioGroup.Item value="all">
-                <RadioGroup.Label>All</RadioGroup.Label>
-              </RadioGroup.Item>
-              <RadioGroup.Item value="one">
-                <RadioGroup.Label>One</RadioGroup.Label>
-              </RadioGroup.Item>
-            </RadioGroup.Root>
-          </div> */}
-          
-          <RadioGroup defaultValue={"all"} onValueChange={handleRadioChange}>
+          {/* RadioGroup selectors with All or One */}
+          <RadioGroup.Root
+            value={allOrOne}
+            onChange={(newAllOrOne) =>
+              handleRadioChange(poolAddress, newAllOrOne)
+            }
+          >
             <RadioGroup.Item value="all">
               <RadioGroup.Label>All</RadioGroup.Label>
             </RadioGroup.Item>
             <RadioGroup.Item value="one">
               <RadioGroup.Label>One</RadioGroup.Label>
             </RadioGroup.Item>
-          </RadioGroup>
-          {/* Radix dropdown */}
-          <DropdownMenu.Root>
+          </RadioGroup.Root>
+          {/* Token dropdown for the One form */}
+          <DropdownMenu.Root
+            open={currencySelectorGroup.tokenSelectorIsOpen}
+            onOpenChange={(isOpen) => {
+              const newForm = {
+                ...currencySelectorGroup,
+                tokenSelectorIsOpen: isOpen,
+              };
+              updateForm(poolAddress, newForm);
+            }}
+          >
             <DropdownMenu.Trigger
               style={{
                 backgroundColor: "transparent",
@@ -617,35 +528,36 @@ function CurrencySelector({ data, poolAddress }) {
                 fontWeight: "bold",
               }}
             >
-              USDT
+              {Object.keys(oneForms).find(
+                (tokenAddress) => oneForms[tokenAddress].isSelected
+              ) || "Select a token"}
               <span className="ms-1">
                 <i className="bi bi-caret-down-fill"></i>
               </span>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content sideOffset={5}>
-              {/* <DropdownMenu.CheckboxItem
-                checked={state.currencySelectors[poolAddress].tokens}
-                onCheckedChange={setBookmarksChecked}
-              >
-                <DropdownMenu.ItemIndicator>
-                  <i className="bi bi-check-circle-fill"></i>
-                </DropdownMenu.ItemIndicator>
-                Show Bookmarks
-              </DropdownMenu.CheckboxItem>
-              <DropdownMenu.CheckboxItem
-                checked={state.urlsChecked}
-                onCheckedChange={setUrlsChecked}
-              >
-                <DropdownMenu.ItemIndicator>
-                  <i className="bi bi-check-circle-fill"></i>
-                </DropdownMenu.ItemIndicator>
-                Show Full URLs
-              </DropdownMenu.CheckboxItem> */}
+              {Object.keys(oneForms).map((oneFormTokenAddress) => {
+                const oneForm = oneForms[oneFormTokenAddress];
+                return (
+                  <DropdownMenu.CheckboxItem
+                    key={oneFormTokenAddress}
+                    checked={oneForm.isSelected}
+                    onCheckedChange={(isSelected) => {
+                      if (isSelected) {
+                        handleTokenSelect(poolAddress, oneFormTokenAddress);
+                      }
+                    }}
+                  >
+                    {oneForm.symbol}
+                  </DropdownMenu.CheckboxItem>
+                );
+              })}
             </DropdownMenu.Content>
           </DropdownMenu.Root>
         </div>
         {/* input form to put how many tokens to stake */}
-        <div className="">
+        {/* input form to put how many tokens to stake, use bootstrap, use functions */}
+        <div className="ps-2">
           <input
             type="text"
             className="form-control form-control bg-secondary text-light border-secondary"
@@ -662,6 +574,10 @@ function CurrencySelector({ data, poolAddress }) {
               height: "40px",
             }}
             placeholder="0.00"
+            value={allOrOne === "all" ? allForm.totalAmount : ""}
+            onChange={(event) =>
+              handleAllInputChange(poolAddress, event.target.value)
+            }
           />
         </div>
       </div>
@@ -754,14 +670,14 @@ try {
                 <div className="">
                   <div className="row">
                     <div className="col-md-6">
-                      {/* <VerticalPair2>
+                      {/* <VerticalPair3>
                       Pool Type: {pool.poolType} {pool.poolTypeVersion}
-                    </VerticalPair2>
-                    <VerticalPair2>
+                    </VerticalPair3>
+                    <VerticalPair3>
                       Total Value Locked: {pool.totalValueLockedETH} ETH / $
                       {pool.totalValueLockedUSD}
-                    </VerticalPair2> */}
-                      <VerticalPair2
+                    </VerticalPair3> */}
+                      <VerticalPair3
                         end={false}
                         title="Pool Type"
                         value={
@@ -771,14 +687,14 @@ try {
                           </span>
                         }
                       />
-                      <VerticalPair2
+                      <VerticalPair3
                         end={false}
                         title="Total Value Locked"
                         value={`$${pool.totalValueLocked}`}
                       />
                     </div>
                     <div className="col-md-6">
-                      <VerticalPair2
+                      <VerticalPair3
                         end={false}
                         title="Amount of Holders"
                         value={`${pool.holdersCount}`}
@@ -841,7 +757,7 @@ try {
                       <div className="d-flex justify-content-between">
                         {/* div with rounded corners on the left side, content is USDT and a down arrow, it's a dropdown */}
                         <CurrencySelector poolAddress={pool.id} data={data} />
-                        <VerticalPair2
+                        <VerticalPair3
                           title="Your Balance"
                           value="NOT IMPLEMENTED"
                           end

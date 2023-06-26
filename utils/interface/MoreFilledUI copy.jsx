@@ -247,6 +247,7 @@ const VerticalPair3 = ({ title, value, end }) => {
  */
 const getIndexedPoolAddresses2 = (/** @type {TransformedData} */ data) =>
   data.pools.reduce((acc, pool) => {
+    // console.log("my address", pool.address);
     acc[pool.address] = pool;
     return acc;
   }, {});
@@ -277,6 +278,7 @@ const indexedPoolAddresses = getIndexedPoolAddresses2(transformedData);
  * @property {string} inputAmount - User input amount for the token in the pool.
  * @property {string} symbol - Self-explanatory.
  * @property {boolean} isSelected - Indicates whether the token is selected.
+ * @property {string} address - Address of the token.
  */
 
 /**
@@ -292,6 +294,7 @@ const indexedPoolAddresses = getIndexedPoolAddresses2(transformedData);
  * @property {AllForm} allForm - Form for the "all" token in the pool.
  * @property {Object.<string, OneForm>} oneForms - Forms for each token in the pool.
  * @property {boolean} tokenSelectorIsOpen - Indicates whether the token selector dropdown is open.
+ * @property {string[]} tokenAddresses - Array containing all the addresses of the tokens it contains.
  */
 
 /**
@@ -332,6 +335,7 @@ const forms = {
                 inputAmount: "",
                 symbol: token.symbol,
                 isSelected: i === 0,
+                address: token.address,
               };
               return acc;
             },
@@ -339,6 +343,9 @@ const forms = {
           ),
         },
         tokenSelectorIsOpen: false,
+        tokenAddresses: indexedPoolAddresses[poolAddress].tokens.map(
+          (token) => token.address
+        ),
       };
       return acc;
     },
@@ -473,112 +480,412 @@ function handleClickCurrencySelector(/** @type {string} */ poolAddress) {
   updateForm(poolAddress, newForm);
 }
 
+const myItemStyles = `
+    border-radius: 3px;
+    margin-bottom: 5px;
+    background: #4A4F51;
+    padding: 8px;
+    cursor: pointer;
+    /* deep shadow */
+    
+    &:hover {
+        /*darken*/
+        background: #3A3F41;
+    }
+`;
+const MyCheckboxItem = styled("DropdownMenu.CheckboxItem")`
+  ${myItemStyles}
+`;
+
 /**
  * @param {{ poolAddress: string, data: TransformedData }} props
  */
 function CurrencySelector({ data, poolAddress }) {
   /** @type {CurrencySelectorGroup} */
   const currencySelectorGroup = state.forms[poolAddress];
-  const { allOrOne, allForm, oneForms } = currencySelectorGroup;
-
+  const { allOrOne, allForm, oneForms, tokenAddresses, tokenSelectorIsOpen } =
+    currencySelectorGroup;
+  // const whatever = tokenAddresses.map((a) => oneForms[a].isSelected);
+  const arrayOfSameLengthAsTokenAddresses = [...Array(tokenAddresses.length)];
+  // arrayOfSameLengthAsTokenAddresses.map((a) => oneForms[a].isSelected);
+  const pool = indexedPoolAddresses[poolAddress];
+  function handleSubmitAll(
+    /** @type {string} */ poolAddress,
+    /** @type {string} */ totalAmount
+  ) {
+    console.log("handleSubmitAll");
+  }
+  function handleSubmitOne(
+    /** @type {string} */ poolAddress,
+    /** @type {string} */ tokenAddress,
+    /** @type {string} */ inputAmount
+  ) {
+    console.log("handleSubmitOne");
+  }
+  // const tokens = pool.tokens;
+  // const tokenSymbols = tokens.map((token) => token.symbol);
+  // const tokenDecimals = tokens.map((token) => token.decimals);
+  // const tokenBalances = tokens.map((token) => token.
   return (
     <div>
-      <div className="d-flex align-items-center">
-        <div
-          className="bg-secondary p-2"
-          style={{
-            // rounded left corners
-            borderTopLeftRadius: "0.5rem",
-            borderBottomLeftRadius: "0.5rem",
-            // make height 40px
-            height: "40px",
-          }}
-          onClick={() => handleClickCurrencySelector(poolAddress)}
-        >
-          {/* <span className="fw-bold">USDT</span> */}
-          {/* RadioGroup selectors with All or One */}
-          <RadioGroup.Root
+      <div className="d-flex flex-column">
+        {/* RadioGroup selectors with All or One */}
+        <RadioGroup.Root>
+          {/* <RadioGroup.Content> */}
+          <RadioGroup.RadioGroup
             value={allOrOne}
-            onChange={(newAllOrOne) =>
-              handleRadioChange(poolAddress, newAllOrOne)
-            }
+            // make this transparent cuz this is just a label thing and then we'll modify the indicator to make it round
+            style={{
+              backgroundColor: "transparent",
+              // make height 40px
+              height: "40px",
+              width: "100%",
+            }}
+            onValueChange={(
+              /** @type {"all" | "one"} */
+              newAllOrOne
+            ) => {
+              console.log("newAllOrOne", newAllOrOne);
+              return handleRadioChange(poolAddress, newAllOrOne);
+            }}
           >
-            <RadioGroup.Item value="all">
-              <RadioGroup.Label>All</RadioGroup.Label>
+            {/* <RadioGroup.Indicator value="all"> */}
+            <RadioGroup.Item
+              value="all"
+              style={{
+                fontWeight: allOrOne === "all" ? "bold" : "normal",
+                // Background is 6e4ac5 if selected, otherwise it's 585858
+                backgroundColor: allOrOne === "all" ? "#6e4ac5" : "#585858",
+                // round corners to the left by 4 px
+                borderTopLeftRadius: "4px",
+                borderBottomLeftRadius: "4px",
+                height: "40px",
+                // make border 1px solid
+                // border:
+                //   "1px solid " + (allOrOne === "all" ? "#6e4ac5" : "#585858"),
+                // make border right 0px
+                border: "0px",
+                color: "white",
+                letterSpacing: allOrOne === "all" ? "0.033em" : "0.01em",
+                // horizontal padding is 16px and vertical padding is 4px
+                padding: "4px 16px",
+              }}
+            >
+              <RadioGroup.Indicator />
+              {/* <i className="bi bi-check-circle-fill"></i> */}
+              {/* </RadioGroup.Indicator> */}
+              {/* All */}
+              <label
+                className="form-check-label"
+                style={{
+                  cursor: "pointer",
+                }}
+                // highlight if selected
+              >
+                All
+              </label>
             </RadioGroup.Item>
-            <RadioGroup.Item value="one">
-              <RadioGroup.Label>One</RadioGroup.Label>
+            {/* </RadioGroup.Indicator> */}
+            <RadioGroup.Item
+              value="one"
+              style={{
+                cursor: "pointer",
+                fontWeight: allOrOne === "one" ? "bold" : "normal",
+                // Background is 6e4ac5 if selected, otherwise it's 585858
+                backgroundColor: allOrOne === "one" ? "#6e4ac5" : "#585858",
+                // round corners to the right by 4 px
+                borderTopRightRadius: "4px",
+                borderBottomRightRadius: "4px",
+                height: "40px",
+                // make border 1px solid
+                // border:
+                //   "1px solid " + (allOrOne === "one" ? "#6e4ac5" : "#585858"),
+                // make border left 0px
+                border: "0px",
+                color: "white",
+                letterSpacing: allOrOne === "one" ? "0.033em" : "0.01em",
+                // horizontal padding is 16px and vertical padding is 4px
+                padding: "4px 16px",
+              }}
+            >
+              <RadioGroup.Indicator>{/* <>One</> */}</RadioGroup.Indicator>
+              <label
+                className="form-check-label"
+                style={{
+                  cursor: "pointer",
+                }}
+              >
+                One
+              </label>
             </RadioGroup.Item>
-          </RadioGroup.Root>
-          {/* Token dropdown for the One form */}
-          <DropdownMenu.Root
-            open={currencySelectorGroup.tokenSelectorIsOpen}
-            onOpenChange={(isOpen) => {
+          </RadioGroup.RadioGroup>
+          {/* </RadioGroup.Content> */}
+        </RadioGroup.Root>
+        <div className="d-flex flex-row">
+          {/* make an input here that will get user inputAmount & pass it to the functions above */}
+          <input
+            type="text"
+            className="form-control"
+            style={{
+              backgroundColor: "#585858",
+              color: "white",
+              border: "0px",
+              // unround right corners if one is selected, otherwise round right corners
+              borderTopRightRadius: allOrOne === "one" ? "0px" : "4px",
+              borderBottomRightRadius: allOrOne === "one" ? "0px" : "4px",
+              // borderTopRightRadius: "0px",
+              // borderBottomRightRadius: "0px",
+              // horizontal padding is 16px and vertical padding is 4px
+              padding: "4px 16px",
+              // maxWidth: "100px" if one is selected, otherwise 150px
+              maxWidth: allOrOne === "one" ? "100px" : "150px",
+            }}
+            // path to amount: sampleForms.forms["0"].oneForms["0"].inputAmount; but we gotta find which one is selected
+            value={
+              allOrOne === "all"
+                ? allForm.totalAmount
+                : oneForms[ // takes a string (tokenAddress)
+                    // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed
+                    arrayOfSameLengthAsTokenAddresses.reduce(
+                      (acc, _, index) => {
+                        const tokenAddress = tokenAddresses[index];
+                        const oneForm = oneForms[tokenAddress];
+                        if (oneForm.isSelected) {
+                          return tokenAddress;
+                        }
+                        return acc;
+                      },
+                      ""
+                    )
+                  ].inputAmount
+            }
+            onChange={(e) => {
               const newForm = {
                 ...currencySelectorGroup,
-                tokenSelectorIsOpen: isOpen,
+                inputAmount: e.target.value,
               };
               updateForm(poolAddress, newForm);
             }}
-          >
-            <DropdownMenu.Trigger
+          />
+
+          {/* Token dropdown for the One form, hide if All is selected*/}
+          {/* make a div same color as input here, rounded right, straight left, and it'll have the selected token inside */}
+          {allOrOne === "one" && (
+            <div
               style={{
-                backgroundColor: "transparent",
-                border: "none",
-                fontWeight: "bold",
+                backgroundColor: "#585858",
+                color: "white",
+                // round right corners
+                borderTopRightRadius: "4px",
+                borderBottomRightRadius: "4px",
+                // apply a 2 px margin to the left
+                marginLeft: "5px",
+                // horizontal padding is 16px and vertical padding is 4px
+                padding: "4px 4px",
+                maxWidth: "100px",
+                // make it a flexbox
+                display: "flex",
+                // center the text
+                alignItems: "center",
+                // justify the text to the right
+                justifyContent: "flex-end",
               }}
             >
-              {Object.keys(oneForms).find(
-                (tokenAddress) => oneForms[tokenAddress].isSelected
-              ) || "Select a token"}
-              <span className="ms-1">
-                <i className="bi bi-caret-down-fill"></i>
-              </span>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content sideOffset={5}>
-              {Object.keys(oneForms).map((oneFormTokenAddress) => {
-                const oneForm = oneForms[oneFormTokenAddress];
-                return (
-                  <DropdownMenu.CheckboxItem
-                    key={oneFormTokenAddress}
-                    checked={oneForm.isSelected}
-                    onCheckedChange={(isSelected) => {
-                      if (isSelected) {
-                        handleTokenSelect(poolAddress, oneFormTokenAddress);
+              <DropdownMenu.Root
+                open={currencySelectorGroup.tokenSelectorIsOpen}
+                style={{ position: "relative" }}
+                onOpenChange={(
+                  /** @type {boolean} */
+                  isOpen
+                ) => {
+                  console.log(
+                    "isOpen",
+                    isOpen,
+                    "containinAmountOfTokenssss",
+                    state.forms[poolAddress],
+                    // tokenAddresses.length,
+                    "tokenAddresses",
+                    state.forms[poolAddress].tokenAddresses,
+                    "poolAddress",
+                    poolAddress
+                    // "state",
+                    // JSON.stringify(state, null, 2)
+                  );
+                  const newForm = {
+                    ...currencySelectorGroup,
+                    tokenSelectorIsOpen: isOpen,
+                  };
+                  updateForm(poolAddress, newForm);
+                }}
+              >
+                <DropdownMenu.Trigger
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "none",
+                    fontWeight: "bold",
+                    color: "white",
+                    letterSpacing: "0.033em",
+                    display: "flex",
+                  }}
+                >
+                  {tokenAddresses.length === 0 ? (
+                    <></>
+                  ) : allOrOne === "one" ? (
+                    // if one is selected, show the selected token
+                    <span
+                      style={{
+                        // make it a flexbox
+                        display: "flex",
+                        // center the text
+                        alignItems: "center",
+                        // justify the text to the right
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      {/* find selected token address and use its symbol, if none are there, put "Select a token" */}
+                      {
+                        // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed
+                        arrayOfSameLengthAsTokenAddresses.reduce(
+                          (acc, _, index) => {
+                            const tokenAddress = tokenAddresses[index];
+                            const oneForm = oneForms[tokenAddress];
+                            if (oneForm.isSelected) {
+                              return oneForm.symbol;
+                            }
+                            return acc;
+                          },
+                          "Select a token"
+                        )
                       }
-                    }}
-                  >
-                    {oneForm.symbol}
-                  </DropdownMenu.CheckboxItem>
-                );
-              })}
-            </DropdownMenu.Content>
-          </DropdownMenu.Root>
+                      {/* <i className="bi bi-chevron-down"></i> */}
+                    </span>
+                  ) : (
+                    // if all is selected, show "All"
+                    "All"
+                  )}
+                  {/* {Object.keys(oneForms).find(
+                (tokenAddress) => oneForms[tokenAddress].isSelected
+              ) || "Select a token"} */}
+                  <span className="ms-1">
+                    <i className="bi bi-caret-down-fill"></i>
+                  </span>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content
+                  sideOffset={5}
+                  style={{
+                    position: "absolute",
+                    bottom: "30px",
+                    backgroundColor: "#161616",
+                    padding: "5px",
+                    borderRadius: "4px",
+                    paddingBottom: "0px",
+                    /*set width so it's the maximum allowed by the interior content (width: max-content)*/
+                    width: "max-content",
+                  }}
+                >
+                  {arrayOfSameLengthAsTokenAddresses.map((_, index) => {
+                    const tokenAddress = tokenAddresses[index];
+                    const oneForm = oneForms[tokenAddress];
+                    return (
+                      <MyCheckboxItem
+                        key={tokenAddress}
+                        checked={oneForm.isSelected}
+                        onCheckedChange={(
+                          /** @type {boolean} */
+                          isSelected
+                        ) => {
+                          if (isSelected) {
+                            handleTokenSelect(poolAddress, tokenAddress);
+                          }
+                        }}
+                      >
+                        <DropdownMenu.ItemIndicator
+                          style={{ marginRight: "5px" }}
+                        >
+                          <i className="bi bi-check-circle-fill"></i>
+                        </DropdownMenu.ItemIndicator>
+                        {oneForm.symbol}
+                      </MyCheckboxItem>
+                    );
+                  })}
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            </div>
+          )}
         </div>
-        {/* input form to put how many tokens to stake */}
-        {/* input form to put how many tokens to stake, use bootstrap, use functions */}
-        <div className="ps-2">
-          <input
-            type="text"
-            className="form-control form-control bg-secondary text-light border-secondary"
-            style={{
-              // max size is like 150px
-              maxWidth: "110px",
-              // rounded right corners
-              borderTopRightRadius: "0.5rem",
-              borderBottomRightRadius: "0.5rem",
-              // unrounded left corners
-              borderTopLeftRadius: "0",
-              borderBottomLeftRadius: "0",
-              // make height 40px
-              height: "40px",
+        {/* submit buttons */}
+        <div
+          className="d-flex justify-content-between align-items-center"
+          style={{ width: "100%" }}
+        >
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ width: "100%" }}
+            onClick={() => {
+              // if all is selected, submit the form
+              if (allOrOne === "all") {
+                // address & amount
+                handleSubmitAll(poolAddress, allForm.totalAmount);
+              } else {
+                const tokenAddress = Object.keys(oneForms).find(
+                  (tokenAddress) => oneForms[tokenAddress].isSelected
+                );
+                if (!tokenAddress) {
+                  console.log("Error: token not selected");
+                  return;
+                }
+                // if one is selected, submit the form
+                handleSubmitOne(
+                  poolAddress,
+                  oneForms[tokenAddress].inputAmount
+                );
+              }
             }}
-            placeholder="0.00"
-            value={allOrOne === "all" ? allForm.totalAmount : ""}
-            onChange={(event) =>
-              handleAllInputChange(poolAddress, event.target.value)
-            }
-          />
+          >
+            {allOrOne === "all" ? "Submit All" : "Submit One"}
+          </button>
+          {/* show the % of each token that the pool has multiplied by the input amount */}
+          {
+            // if all, show all the tokens, so if there's 30% usdt and 70% eth, show inputAmount*30% usdt and inputAmount*70% eth
+            // allOrOne === "all" ? (
+            //   <div
+            //     className="d-flex justify-content-between align-items-center"
+            //     style={{ width: "100%" }}
+            //   >
+            //     {tokenAddresses.map((tokenAddress) => {
+            //       const oneForm = oneForms[tokenAddress];
+            //       // get the contents of the pool from the pool address
+            //       /** @type {TransformedPool} */
+            //       const pool = state.pools[poolAddress];
+            //       return (
+            //         <div
+            //           key={tokenAddress}
+            //           className="d-flex flex-column align-items-center"
+            //           style={{ width: "100%" }}
+            //         >
+            //           {
+            //             // if the pool has the token, show the % of the pool that the token is
+            //             pool.tokens[tokenAddress] ? (
+            //               <div
+            //                 className="d-flex justify-content-between align-items-center"
+            //                 style={{ width: "100%" }}
+            //               >
+            //                 {/* show the % of the pool that the token is */}
+            //                 <span
+            //                   style={{
+            //                     color: "white",
+            //                     fontSize: "0.8rem",
+            //                     fontWeight: "bold",
+            //                     letterSpacing: "0.033em",
+            //                   }}
+            //                 >
+            //                   {pool.tokens[tokenAddress]}%
+            //                 </span>
+            //                 {/* show the % of the pool that the token is */}
+            //                 <span
+            //           }
+            // })}
+          }
         </div>
       </div>
     </div>
@@ -715,14 +1022,15 @@ try {
                     </div>
                   </div>
                   {/* align to the right */}
-                  <div className="row mt-3">
-                    <div className="col-md-12">
+                  <div className="mt-3 d-flex justify-content-between">
+                    <CurrencySelector poolAddress={pool.address} data={data} />
+                    <div className="">
                       {/* <p className="text-end fs-3">
                       Your Balance: {pool.userBalance}
                     </p> */}
                       <div className="d-flex justify-content-between">
                         {/* div with rounded corners on the left side, content is USDT and a down arrow, it's a dropdown */}
-                        <CurrencySelector poolAddress={pool.id} data={data} />
+                        <span></span>
                         <VerticalPair3
                           title="Your Balance"
                           value="NOT IMPLEMENTED"

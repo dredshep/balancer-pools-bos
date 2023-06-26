@@ -318,7 +318,7 @@ const forms = {
     ) => {
       // just instantiate
       acc[poolAddress] = {
-        allOrOne: "all",
+        allOrOne: "one",
         allForm: {
           totalAmount: "",
         },
@@ -612,7 +612,7 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
         </div>
         <div className="d-flex align-items-center mb-2">
           {/* RadioGroup selectors with All or One; display only if operation is "unstake" */}
-          {operation === "unstake" && (
+          {undefined && operation === "unstake" && (
             <RadioGroup.Root>
               {/* <RadioGroup.Content> */}
               <RadioGroup.RadioGroup

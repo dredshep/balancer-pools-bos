@@ -356,6 +356,23 @@ State.init({
   forms,
 });
 
+/**
+ * Function to find the selected OneForm in a given CurrencySelectorGroup
+ * @param {string} poolAddress - The address of the pool to search in.
+ * @param {CurrencySelectorFormGroupsObject} forms - The forms object to search in.
+ * @returns {OneForm | null} - The selected OneForm if found, null otherwise.
+ */
+function getSelectedOneFormInPool(poolAddress, forms) {
+  if (forms[poolAddress]) {
+    for (let key in forms[poolAddress].oneForms) {
+      if (forms[poolAddress].oneForms[key].isSelected) {
+        return forms[poolAddress].oneForms[key];
+      }
+    }
+  }
+  return null;
+}
+
 let data;
 try {
   data = getTransformedData();
@@ -498,9 +515,9 @@ const MyCheckboxItem = styled("DropdownMenu.CheckboxItem")`
 `;
 
 /**
- * @param {{ poolAddress: string, data: TransformedData }} props
+ * @param {{ poolAddress: string, data: TransformedData, className: string, operation: "stake" | "unstake" }} props
  */
-function CurrencySelector({ data, poolAddress }) {
+function CurrencySelector({ data, poolAddress, className, operation }) {
   /** @type {CurrencySelectorGroup} */
   const currencySelectorGroup = state.forms[poolAddress];
   const { allOrOne, allForm, oneForms, tokenAddresses, tokenSelectorIsOpen } =
@@ -522,173 +539,211 @@ function CurrencySelector({ data, poolAddress }) {
   ) {
     console.log("handleSubmitOne");
   }
+
+  function setMaxOne(
+    /** @type {string} */ poolAddress,
+    /** @type {string} */ tokenAddress
+  ) {
+    console.log("setMaxOne");
+  }
+
+  function setMaxAll(/** @type {string} */ poolAddress) {
+    console.log("setMaxAll");
+  }
+
+  /**
+   * Returns a comma-separated string of token symbols for the selected tokens in the CurrencySelector.
+   * @param {OneForm[]} oneForms - An object containing the form data for each token in the CurrencySelector.
+   * @param {undefined[]} arrayOfSameLengthAsTokenAddresses - An array of the same length as the number of tokens in the CurrencySelector.
+   * @returns {OneForm[]} A list of token symbols for the selected tokens.
+   */
+  function getOneFormListOfTokenSymbols(
+    oneForms,
+    arrayOfSameLengthAsTokenAddresses
+  ) {
+    return arrayOfSameLengthAsTokenAddresses
+      .map((_, index) => {
+        const tokenAddress = tokenAddresses[index];
+        const oneForm = oneForms[tokenAddress];
+        return oneForm;
+      })
+      .filter(
+        (
+          /** @type {OneForm} */
+          oneForm
+        ) => oneForm.isSelected
+      );
+  }
+
   // const tokens = pool.tokens;
   // const tokenSymbols = tokens.map((token) => token.symbol);
   // const tokenDecimals = tokens.map((token) => token.decimals);
   // const tokenBalances = tokens.map((token) => token.
   return (
-    <div>
-      <div className="d-flex flex-column">
-        {/* RadioGroup selectors with All or One */}
-        <RadioGroup.Root>
-          {/* <RadioGroup.Content> */}
-          <RadioGroup.RadioGroup
-            value={allOrOne}
-            // make this transparent cuz this is just a label thing and then we'll modify the indicator to make it round
+    <div className={className}>
+      <div
+        className="d-flex flex-column container py-2 pb-3"
+        // style={{
+        //   zIndex: 1000,
+        // }}
+      >
+        {/* title */}
+        <div
+          className="d-flex justify-content-between align-items-center"
+          style={{
+            marginBottom: "0.25rem",
+          }}
+        >
+          <div
             style={{
-              backgroundColor: "transparent",
-              // make height 40px
-              height: "40px",
-              width: "100%",
-            }}
-            onValueChange={(
-              /** @type {"all" | "one"} */
-              newAllOrOne
-            ) => {
-              console.log("newAllOrOne", newAllOrOne);
-              return handleRadioChange(poolAddress, newAllOrOne);
+              fontSize: "20px",
+              fontWeight: "bold",
             }}
           >
-            {/* <RadioGroup.Indicator value="all"> */}
-            <RadioGroup.Item
-              value="all"
-              style={{
-                fontWeight: allOrOne === "all" ? "bold" : "normal",
-                // Background is 6e4ac5 if selected, otherwise it's 585858
-                backgroundColor: allOrOne === "all" ? "#6e4ac5" : "#585858",
-                // round corners to the left by 4 px
-                borderTopLeftRadius: "4px",
-                borderBottomLeftRadius: "4px",
-                height: "40px",
-                // make border 1px solid
-                // border:
-                //   "1px solid " + (allOrOne === "all" ? "#6e4ac5" : "#585858"),
-                // make border right 0px
-                border: "0px",
-                color: "white",
-                letterSpacing: allOrOne === "all" ? "0.033em" : "0.01em",
-                // horizontal padding is 16px and vertical padding is 4px
-                padding: "4px 16px",
-              }}
-            >
-              <RadioGroup.Indicator />
-              {/* <i className="bi bi-check-circle-fill"></i> */}
-              {/* </RadioGroup.Indicator> */}
-              {/* All */}
-              <label
-                className="form-check-label"
-                style={{
-                  cursor: "pointer",
-                }}
-                // highlight if selected
-              >
-                All
-              </label>
-            </RadioGroup.Item>
-            {/* </RadioGroup.Indicator> */}
-            <RadioGroup.Item
-              value="one"
-              style={{
-                cursor: "pointer",
-                fontWeight: allOrOne === "one" ? "bold" : "normal",
-                // Background is 6e4ac5 if selected, otherwise it's 585858
-                backgroundColor: allOrOne === "one" ? "#6e4ac5" : "#585858",
-                // round corners to the right by 4 px
-                borderTopRightRadius: "4px",
-                borderBottomRightRadius: "4px",
-                height: "40px",
-                // make border 1px solid
-                // border:
-                //   "1px solid " + (allOrOne === "one" ? "#6e4ac5" : "#585858"),
-                // make border left 0px
-                border: "0px",
-                color: "white",
-                letterSpacing: allOrOne === "one" ? "0.033em" : "0.01em",
-                // horizontal padding is 16px and vertical padding is 4px
-                padding: "4px 16px",
-              }}
-            >
-              <RadioGroup.Indicator>{/* <>One</> */}</RadioGroup.Indicator>
-              <label
-                className="form-check-label"
-                style={{
-                  cursor: "pointer",
-                }}
-              >
-                One
-              </label>
-            </RadioGroup.Item>
-          </RadioGroup.RadioGroup>
-          {/* </RadioGroup.Content> */}
-        </RadioGroup.Root>
-        <div className="d-flex flex-row">
-          {/* make an input here that will get user inputAmount & pass it to the functions above */}
-          <input
-            type="text"
-            className="form-control"
+            {operation === "stake" ? "Stake" : "Unstake"}
+          </div>
+          {/* <div
             style={{
-              backgroundColor: "#585858",
-              color: "white",
-              border: "0px",
-              // unround right corners if one is selected, otherwise round right corners
-              borderTopRightRadius: allOrOne === "one" ? "0px" : "4px",
-              borderBottomRightRadius: allOrOne === "one" ? "0px" : "4px",
-              // borderTopRightRadius: "0px",
-              // borderBottomRightRadius: "0px",
-              // horizontal padding is 16px and vertical padding is 4px
-              padding: "4px 16px",
-              // maxWidth: "100px" if one is selected, otherwise 150px
-              maxWidth: allOrOne === "one" ? "100px" : "150px",
+              fontSize: "20px",
+              fontWeight: "bold",
             }}
-            // path to amount: sampleForms.forms["0"].oneForms["0"].inputAmount; but we gotta find which one is selected
-            value={
-              allOrOne === "all"
-                ? allForm.totalAmount
-                : oneForms[ // takes a string (tokenAddress)
-                    // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed
-                    arrayOfSameLengthAsTokenAddresses.reduce(
-                      (acc, _, index) => {
-                        const tokenAddress = tokenAddresses[index];
-                        const oneForm = oneForms[tokenAddress];
-                        if (oneForm.isSelected) {
-                          return tokenAddress;
-                        }
-                        return acc;
-                      },
-                      ""
-                    )
-                  ].inputAmount
+          >
+          </div> */}
+        </div>
+        <div className="d-flex align-items-center mb-2">
+          {/* RadioGroup selectors with All or One; display only if operation is "unstake" */}
+          {operation === "unstake" && (
+            <RadioGroup.Root>
+              {/* <RadioGroup.Content> */}
+              <RadioGroup.RadioGroup
+                value={allOrOne}
+                // make this transparent cuz this is just a label thing and then we'll modify the indicator to make it round
+                style={{
+                  backgroundColor: "transparent",
+                  // make height 40px
+                  height: "40px",
+                  width: "100%",
+                }}
+                onValueChange={(
+                  /** @type {"all" | "one"} */
+                  newAllOrOne
+                ) => {
+                  console.log("newAllOrOne", newAllOrOne);
+                  return handleRadioChange(poolAddress, newAllOrOne);
+                }}
+              >
+                {/* <RadioGroup.Indicator value="all"> */}
+                <RadioGroup.Item
+                  value="all"
+                  style={{
+                    fontWeight: allOrOne === "all" ? "bold" : "normal",
+                    // Background is 6e4ac5 if selected, otherwise it's 585858
+                    backgroundColor: allOrOne === "all" ? "#6e4ac5" : "#585858",
+                    // round corners to the left by 4 px
+                    borderTopLeftRadius: "4px",
+                    borderBottomLeftRadius: "4px",
+                    height: "40px",
+                    // make border 1px solid
+                    // border:
+                    //   "1px solid " + (allOrOne === "all" ? "#6e4ac5" : "#585858"),
+                    // make border right 0px
+                    border: "0px",
+                    color: "white",
+                    letterSpacing: allOrOne === "all" ? "0.033em" : "0.01em",
+                    // horizontal padding is 16px and vertical padding is 4px
+                    padding: "4px 16px",
+                  }}
+                >
+                  <RadioGroup.Indicator />
+                  {/* <i className="bi bi-check-circle-fill"></i> */}
+                  {/* </RadioGroup.Indicator> */}
+                  {/* All */}
+                  <label
+                    className="form-check-label"
+                    style={{
+                      cursor: "pointer",
+                    }}
+                    // highlight if selected
+                  >
+                    All
+                  </label>
+                </RadioGroup.Item>
+                {/* </RadioGroup.Indicator> */}
+                <RadioGroup.Item
+                  value="one"
+                  style={{
+                    cursor: "pointer",
+                    fontWeight: allOrOne === "one" ? "bold" : "normal",
+                    // Background is 6e4ac5 if selected, otherwise it's 585858
+                    backgroundColor: allOrOne === "one" ? "#6e4ac5" : "#585858",
+                    // round corners to the right by 4 px
+                    borderTopRightRadius: "4px",
+                    borderBottomRightRadius: "4px",
+                    height: "40px",
+                    // make border 1px solid
+                    // border:
+                    //   "1px solid " + (allOrOne === "one" ? "#6e4ac5" : "#585858"),
+                    // make border left 0px
+                    border: "0px",
+                    color: "white",
+                    letterSpacing: allOrOne === "one" ? "0.033em" : "0.01em",
+                    // horizontal padding is 16px and vertical padding is 4px
+                    padding: "4px 16px",
+                  }}
+                >
+                  <RadioGroup.Indicator>{/* <>One</> */}</RadioGroup.Indicator>
+                  <label
+                    className="form-check-label"
+                    style={{
+                      cursor: "pointer",
+                    }}
+                  >
+                    One
+                  </label>
+                </RadioGroup.Item>
+              </RadioGroup.RadioGroup>
+              {/* </RadioGroup.Content> */}
+            </RadioGroup.Root>
+          )}
+          {/* <div className="d-flex flex-row ms-2">
+            {
+              // say "token" if one or "tokens" if all
+              (allOrOne === "one" ? "token" : "tokens") + ""
             }
-            onChange={(e) => {
-              const newForm = {
-                ...currencySelectorGroup,
-                inputAmount: e.target.value,
-              };
-              updateForm(poolAddress, newForm);
-            }}
-          />
+          </div> */}
+        </div>
+        {/* here goes the title: "Input Amount" */}
+        {(operation === "stake" ||
+          (operation === "unstake" && allOrOne === "one")) && (
+          <>
+            <div className="d-flex flex-row my-2">
+              <div
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                }}
+              >
+                Select a token to {operation === "stake" ? "stake" : "unstake"}.
+              </div>
+            </div>
+            {/* Token dropdown for the One form*/}
+            {/* make a div same color as input here, rounded right, straight left, and it'll have the selected token inside */}
 
-          {/* Token dropdown for the One form, hide if All is selected*/}
-          {/* make a div same color as input here, rounded right, straight left, and it'll have the selected token inside */}
-          {allOrOne === "one" && (
             <div
               style={{
                 backgroundColor: "#585858",
                 color: "white",
                 // round right corners
-                borderTopRightRadius: "4px",
-                borderBottomRightRadius: "4px",
-                // apply a 2 px margin to the left
-                marginLeft: "5px",
+                borderRadius: "4px",
                 // horizontal padding is 16px and vertical padding is 4px
                 padding: "4px 4px",
-                maxWidth: "100px",
+                height: "40px",
                 // make it a flexbox
                 display: "flex",
                 // center the text
                 alignItems: "center",
                 // justify the text to the right
-                justifyContent: "flex-end",
+                justifyContent: "center",
               }}
             >
               <DropdownMenu.Root
@@ -730,7 +785,7 @@ function CurrencySelector({ data, poolAddress }) {
                 >
                   {tokenAddresses.length === 0 ? (
                     <></>
-                  ) : allOrOne === "one" ? (
+                  ) : allOrOne === "one" || operation === "stake" ? (
                     // if one is selected, show the selected token
                     <span
                       style={{
@@ -811,7 +866,84 @@ function CurrencySelector({ data, poolAddress }) {
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
             </div>
-          )}
+          </>
+        )}
+        {/* here goes the title: "Input Amount" */}
+        <div className="d-flex flex-row my-2">
+          <div
+            style={{
+              fontSize: "16px",
+              fontWeight: "bold",
+            }}
+          >
+            Input Amount{" "}
+            <span
+              style={{ color: "#6e4ac5", filter: "brightness(60%)" }}
+              onClick={() => {
+                // if all setMaxAll if not setMaxOne
+                if (allOrOne === "all") {
+                  setMaxAll(poolAddress);
+                } else {
+                  const selectedTokenAddress = getSelectedOneFormInPool(
+                    poolAddress,
+                    state.forms
+                  )?.address;
+                  if (!selectedTokenAddress) return;
+                  setMaxOne(poolAddress, selectedTokenAddress);
+                }
+              }}
+            >
+              (Max: "user balance")
+            </span>
+          </div>
+        </div>
+        <div className="d-flex flex-row mb-2">
+          {/* make an input here that will get user inputAmount & pass it to the functions above */}
+          <input
+            type="text"
+            className="form-control"
+            style={{
+              backgroundColor: "#585858",
+              color: "white",
+              border: "0px",
+              // unround right corners if one is selected, otherwise round right corners
+              // borderTopRightRadius: allOrOne === "one" ? "0px" : "4px",
+              // borderBottomRightRadius: allOrOne === "one" ? "0px" : "4px",
+              // borderTopRightRadius: "0px",
+              // borderBottomRightRadius: "0px",
+              // horizontal padding is 16px and vertical padding is 4px
+              padding: "4px 16px",
+              // maxWidth: "100px" if one is selected, otherwise 150px
+              // maxWidth: allOrOne === "one" ? "100px" : "100%",
+              height: "40px",
+            }}
+            // path to amount: sampleForms.forms["0"].oneForms["0"].inputAmount; but we gotta find which one is selected
+            value={
+              allOrOne === "all" || operation === "stake"
+                ? allForm.totalAmount
+                : oneForms[ // takes a string (tokenAddress)
+                    // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed
+                    arrayOfSameLengthAsTokenAddresses.reduce(
+                      (acc, _, index) => {
+                        const tokenAddress = tokenAddresses[index];
+                        const oneForm = oneForms[tokenAddress];
+                        if (oneForm.isSelected) {
+                          return tokenAddress;
+                        }
+                        return acc;
+                      },
+                      ""
+                    )
+                  ].inputAmount
+            }
+            onChange={(e) => {
+              const newForm = {
+                ...currencySelectorGroup,
+                inputAmount: e.target.value,
+              };
+              updateForm(poolAddress, newForm);
+            }}
+          />
         </div>
         {/* submit buttons */}
         <div
@@ -820,7 +952,7 @@ function CurrencySelector({ data, poolAddress }) {
         >
           <button
             className="btn btn-primary btn-sm"
-            style={{ width: "100%" }}
+            style={{ width: "100%", height: "40px" }}
             onClick={() => {
               // if all is selected, submit the form
               if (allOrOne === "all") {
@@ -1022,15 +1154,14 @@ try {
                     </div>
                   </div>
                   {/* align to the right */}
-                  <div className="mt-3 d-flex justify-content-between">
-                    <CurrencySelector poolAddress={pool.address} data={data} />
-                    <div className="">
+                  <div className="mt-3 d-flex justify-content-end">
+                    {/* <CurrencySelector poolAddress={pool.address} data={data} /> */}
+                    <div className="d-flex flex-column align-items-end">
                       {/* <p className="text-end fs-3">
                       Your Balance: {pool.userBalance}
                     </p> */}
-                      <div className="d-flex justify-content-between">
+                      <div className="d-flex justify-self-end">
                         {/* div with rounded corners on the left side, content is USDT and a down arrow, it's a dropdown */}
-                        <span></span>
                         <VerticalPair3
                           title="Your Balance"
                           value="NOT IMPLEMENTED"
@@ -1038,7 +1169,7 @@ try {
                         />
                       </div>
                       <div className="d-flex justify-content-end">
-                        <button
+                        {/* <button
                           className="btn btn-lg btn-secondary me-3 fw-bold border-0"
                           style={{
                             letterSpacing: "0.033em",
@@ -1047,8 +1178,95 @@ try {
                           }}
                         >
                           Unstake
-                        </button>
-                        <button
+                        </button> */}
+                        <Popover.Root>
+                          <Popover.Trigger
+                            className="btn btn-lg btn-secondary me-3 fw-bold border-0"
+                            style={{
+                              letterSpacing: "0.033em",
+                              // desaturate completely and lighten by 50%
+                              filter: "saturate(0%) brightness(100%)",
+                            }}
+                          >
+                            Unstake
+                          </Popover.Trigger>
+                          <Popover.Content
+                            sideOffset={10}
+                            alignOffset={10}
+                            // make it appear at the top of the button
+                            side="top"
+                            align="end"
+                          >
+                            <Popover.Arrow
+                              // arrow is black, make it secondary, it's a svg contained inside this element as a child
+                              style={{
+                                fill: "var(--bs-secondary)",
+                                // seems to be a tiny bit ligher than the content, so make it a bit darker
+                                filter: "brightness(81%)",
+                              }}
+                            />
+                            <CurrencySelector
+                              className="bg-secondary text-light border-0 rounded-2"
+                              poolAddress={pool.address}
+                              data={data}
+                              operation="unstake"
+                            />
+                          </Popover.Content>
+                        </Popover.Root>
+                        <Popover.Root
+                          style={
+                            {
+                              // display: "relative",
+                            }
+                          }
+                        >
+                          {/* <Popover.Anchor
+                            style={{
+                              display: "absolute",
+                              // make it like 200 pixels above the button
+                              top: "-200px",
+                              // make it like 50 pixels to the left of the button
+                              left: "-50px",
+                            }}
+                          > */}
+                          <Popover.Trigger
+                            className="btn btn-lg btn-primary fw-bold border-0"
+                            // dataSide="top"
+                            // dataAlign="end"
+                            style={{
+                              letterSpacing: "0.033em",
+                              filter:
+                                "hue-rotate(40deg) saturate(80%) brightness(115%)",
+                            }}
+                          >
+                            Stake
+                          </Popover.Trigger>
+                          {/* </Popover.Anchor> */}
+                          {/* put the content as absolute and on top left */}
+                          <Popover.Content
+                            sideOffset={10}
+                            alignOffset={10}
+                            // make it appear at the top of the button
+                            side="top"
+                            align="end"
+                          >
+                            <Popover.Arrow
+                              // arrow is black, make it secondary, it's a svg contained inside this element as a child
+                              style={{
+                                fill: "var(--bs-secondary)",
+                                // seems to be a tiny bit ligher than the content, so make it a bit darker
+                                filter: "brightness(81%)",
+                              }}
+                            />
+                            <CurrencySelector
+                              className="bg-secondary text-light border-0 rounded-2"
+                              poolAddress={pool.address}
+                              data={data}
+                              operation="stake"
+                            />
+                          </Popover.Content>
+                        </Popover.Root>
+                        {/* <button
                           className="btn btn-lg btn-primary fw-bold border-0"
                           style={{
                             letterSpacing: "0.033em",
@@ -1057,7 +1275,7 @@ try {
                           }}
                         >
                           Stake
-                        </button>
+                        </button> */}
                       </div>
                       {/* <StakeForm poolAddress={pool.id} */}
                     </div>

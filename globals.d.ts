@@ -10,6 +10,7 @@ declare const state: any;
 declare const DropdownMenu: any;
 declare const RadioGroup: any;
 declare const styled: any;
+declare const Popover: any;
 // declare const RadioItem: any;
 // declare const ButtonGroup: any;
 

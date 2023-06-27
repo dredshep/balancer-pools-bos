@@ -11,6 +11,25 @@ declare const DropdownMenu: any;
 declare const RadioGroup: any;
 declare const styled: any;
 declare const Popover: any;
+
+declare module "Widget" {
+  import { ReactNode } from "react";
+
+  interface WidgetProps {
+    src: string;
+    props: {
+      userAddress: string;
+      poolAddress: string;
+      onError: (errorHandler: () => void) => void;
+      onSuccess: (successHandler: () => void) => void;
+      requestConnect: () => void;
+      decimals: number;
+    };
+  }
+
+  export default function Widget(props: WidgetProps): ReactNode;
+}
+
 // declare const RadioItem: any;
 // declare const ButtonGroup: any;
 

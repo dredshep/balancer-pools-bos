@@ -6,6 +6,9 @@ const userAddress = Ethers.send("eth_requestAccounts", [])[0];
 // @ts-ignore
 if (!userAddress) return <Web3Connect connectLabel="Connect with Web3" />;
 State.update({ isConnected: true });
+if (state.isConnected !== true)
+  // @ts-ignore
+  return <Web3Connect connectLabel="Connect with Web3" />;
 /** @type {any[]} */
 const erc20ABI =
   // @ts-ignore
@@ -76,6 +79,11 @@ try {
       </>
     );
   } else {
+    // if error?.reason?.indexOf("unknown account ") > -1, return <Web3Connect connectLabel="Connect with Web3" />
+    if (state.errorGettingBalance.indexOf("unknown account ") > -1) {
+      // @ts-ignore
+      return <Web3Connect connectLabel="Connect with Web3" />;
+    }
     //@ts-ignore
     return (
       <>
@@ -88,7 +96,7 @@ try {
   // @ts-ignore
   return (
     <>
-      <h1>Error while trying to fetch balance</h1>
+      <h1>Unhandled error while trying to fetch balance</h1>
       <pre>{JSON.stringify(e, null, 2)}</pre>
     </>
   );

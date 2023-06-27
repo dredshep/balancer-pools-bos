@@ -1,5 +1,14 @@
 {
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.0.5"
+  },
+  "name": "balancer-bos",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/dredshep/balancer-pools-bos.git",
+  "author": "dredshep <dredshep@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^18.2.14"
   }
 }

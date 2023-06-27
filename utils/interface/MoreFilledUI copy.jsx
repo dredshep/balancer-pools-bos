@@ -233,79 +233,6 @@ function getTransformedData() {
 const erc20ABI =
   // @ts-ignore
   fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
-/**
- * @param {{ userAddress: string; poolAddress: string; onError: (error: string) => void; onSuccess: (balance: string) => void; requestConnect: () => void; decimals: number }} props
- * @returns {(poolAddress: string, userAddress: string) => string}
- */
-function getGetUserBalance(props) {
-  let missingProps = [];
-
-  if (!props.userAddress) {
-    missingProps = missingProps.concat("userAddress");
-    // return <Web3Connect connectLabel="Connect with Web3" />;
-  }
-
-  if (!props.poolAddress) missingProps = missingProps.concat("poolAddress");
-
-  if (!props.onError) missingProps = missingProps.concat("onError");
-
-  if (!props.onSuccess) missingProps = missingProps.concat("onSuccess");
-
-  if (!props.requestConnect)
-    missingProps = missingProps.concat("requestConnect");
-
-  if (!props.decimals) missingProps = missingProps.concat("decimals");
-
-  if (missingProps.length)
-    throw "missing props" + JSON.stringify(missingProps, null, 2);
-  // State.update({ missingProps });
-
-  // if (state.missingProps.length > 0) {
-  //   return (
-  //     <div>
-  //       <h1>GetBalanceComponent missing props:</h1>
-  //       <pre>{JSON.stringify(state.missingProps, null, 2)}</pre>
-  //     </div>
-  //   );
-  // }
-
-  /**
-   * @param {string} poolAddress
-   * @param {string} userAddress
-   */
-  return function getUserBalance(poolAddress, userAddress) {
-    if (!Ethers.provider()?.getSigner?.()) {
-      props.requestConnect();
-      return;
-    }
-    try {
-      const erc20 = new ethers.Contract(
-        poolAddress, // address
-        erc20ABI, // erc20 abi
-        Ethers.provider().getSigner()
-      );
-      const balance = erc20
-        .balanceOf(userAddress)
-        .then((balance) => {
-          const processedBalance = ethers.utils.formatUnits(
-            balance,
-            props.decimals
-          );
-          props.onSuccess(processedBalance);
-          return processedBalance;
-        })
-        .catch((e) => {
-          props.onError(e);
-        });
-      return balance;
-    } catch (e) {
-      props.onError(`Error in getUserBalance(). params:
-- poolAddress: ${poolAddress}
-- userAddress: ${userAddress}
-- error: ${e}`);
-    }
-  };
-}
 
 const VerticalPair3 = ({ title, value, end }) => {
   const isEnd = !!end;
@@ -448,12 +375,121 @@ const forms = {
 /**
  * @typedef {Object} State
  * @property {CurrencySelectorFormGroupsObject} forms - Forms object for the currency selector.
+ * @property {string | undefined} userAddress - User's address.
+ * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
  */
 State.init({
   forms,
   // disconnected: true,
-  // userAddress: undefined,
+  userAddress: undefined,
+  errorGettingBalance: undefined,
 });
+
+/********************************
+ * BALANCE FETCHING THINGY
+ ********************************/
+
+//@ts-check
+
+// State.init({ balance: null, errorGettingBalance: null, isConnected: false });
+const userAddress = Ethers.send("eth_requestAccounts", [])[0];
+State.update({ userAddress });
+
+/**
+ * @param {string} poolAddress
+ * @param {string} userAddress
+ */
+
+function getUserBalance(poolAddress, userAddress) {
+  // break if no signer, user disconnected
+  if (!Ethers.provider()?.getSigner?.()) {
+    State.update({
+      userAddress: undefined,
+      errorGettingBalance: "No signer, user disconnected",
+    });
+    console.log("No signer, user disconnected, exiting getUserBalance()");
+    return;
+  }
+  try {
+    const erc20 = new ethers.Contract(
+      poolAddress, // address
+      erc20ABI, // erc20 abi
+      Ethers.provider().getSigner()
+    );
+    const balance = erc20
+      .balanceOf(userAddress)
+      .then((balance) => {
+        // undo big number into a string
+        return ethers.utils.formatUnits(balance, 18);
+      })
+      .catch((e) => {
+        throw e;
+      });
+    return balance;
+  } catch (e) {
+    // return dummy balance 666s
+    return `Error in getUserBalance(). params:
+- poolAddress: ${poolAddress}
+- userAddress: ${userAddress}
+- error: ${e}`;
+  }
+}
+
+/**
+ * @param {CurrencySelectorFormGroupsObject } forms
+ */
+function updateFormsBalance(forms) {
+  const addresses = Object.keys(forms);
+  const formsLength = addresses.length;
+  for (let timesDone = 0; timesDone < formsLength; timesDone++) {
+    const poolAddress = addresses[timesDone];
+    const formToChange = forms[poolAddress];
+    try {
+      try {
+        // this errors out and reverts tx if wrong chain cuz wrong params, prolly nonexistent pool error
+        // error looks like this: Uncaught (in promise) Error: missing revert data in call exception; Transaction reverted without a reason string [ See: https://links.ethers.org/v5-errors-CALL_EXCEPTION ] (data="0x", transaction={"from":"0x450e501C21dF2E72B4aE98343746b0654430dC16","to":"0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9","data":"0x70a08231000000000000000000000000e25c0e141b98a5a449fbd70cfda45f6088486c74","accessList":null}, error={"code":-32000,"message":"execution reverted"}, code=CALL_EXCEPTION, version=providers/5.7.2)
+        if (userAddress) {
+          console.log("getting user balance for form ", "#" + timesDone);
+          /** @type {string} */
+          const balance = getUserBalance(poolAddress, userAddress)
+            .then((/** @type {string} */ bal) => {
+              // State.update({ balance: JSON.stringify(bal) });
+              /** @type {CurrencySelectorGroup} */
+              const newForm = {
+                ...formToChange,
+                poolBalance: bal,
+              };
+              updateForm(poolAddress, newForm);
+              return bal;
+            })
+            .catch((/** @type {string} */ e) => {
+              State.update({ errorGettingBalance: JSON.stringify(e) });
+            });
+          console.log("balance", balance);
+        } else {
+          console.log("no user address");
+          // return <Web3Connect connectLabel="Connect with Web3" />;
+        }
+      } catch (e) {
+        console.log(
+          "first error while trying to get user balance w function calls",
+          e
+        );
+      }
+    } catch (e) {
+      console.log(
+        "second error while trying to get user balance w function calls",
+        e
+      );
+    }
+  }
+}
+
+// const formObj = Object.assign({}, state.forms);
+updateFormsBalance(state.forms);
+/********************************
+ * END BALANCE FETCHING THINGY
+ *******************************/
 
 // if (state.disconnected || !state.userAddress) {
 //   // @ts-ignore
@@ -679,47 +715,6 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
       );
   }
 
-  // const getUserBalance = getGetUserBalance({
-  //   userAddress: state.userAddress,
-  //   decimals: 18,
-  //   onError: (error) => {
-  //     console.log("error", error);
-  //   },
-  //   onSuccess: (balance) => {
-  //     /** @type {CurrencySelectorGroup} */
-  //     const newForm = {
-  //       ...currencySelectorGroup,
-  //       poolBalance: balance,
-  //     };
-  //     updateForm(poolAddress, newForm);
-  //   },
-  //   poolAddress,
-  //   requestConnect: () => {
-  //     State.update({
-  //       disconnected: true,
-  //       userAddress: undefined,
-  //     });
-  //   },
-  // });
-
-  // const balance = getUserBalance(poolAddress, state.userAddress);
-  // /** @type {CurrencySelectorGroup} */
-  // const newForm = {
-  //   ...currencySelectorGroup,
-  //   poolBalance: balance,
-  // };
-
-  // State.update({
-  //   forms: {
-  //     ...state.forms,
-  //     [poolAddress]: newForm,
-  //   },
-  // });
-
-  // const tokens = pool.tokens;
-  // const tokenSymbols = tokens.map((token) => token.symbol);
-  // const tokenDecimals = tokens.map((token) => token.decimals);
-  // const tokenBalances = tokens.map((token) => token.
   return (
     <div className={className}>
       <div
@@ -1034,7 +1029,8 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
                 }
               }}
             >
-              (Max: "user balance")
+              {/* Max: (user balance) */}
+              (Max: {state.forms[poolAddress].poolBalance})
             </span>
           </div>
         </div>
@@ -1047,15 +1043,7 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
               backgroundColor: "#585858",
               color: "white",
               border: "0px",
-              // unround right corners if one is selected, otherwise round right corners
-              // borderTopRightRadius: allOrOne === "one" ? "0px" : "4px",
-              // borderBottomRightRadius: allOrOne === "one" ? "0px" : "4px",
-              // borderTopRightRadius: "0px",
-              // borderBottomRightRadius: "0px",
-              // horizontal padding is 16px and vertical padding is 4px
               padding: "4px 16px",
-              // maxWidth: "100px" if one is selected, otherwise 150px
-              // maxWidth: allOrOne === "one" ? "100px" : "100%",
               height: "40px",
             }}
             // path to amount: sampleForms.forms["0"].oneForms["0"].inputAmount; but we gotta find which one is selected
@@ -1063,7 +1051,7 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
               allOrOne === "all" || operation === "stake"
                 ? allForm.totalAmount
                 : oneForms[ // takes a string (tokenAddress)
-                    // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed
+                    // use this length to iterate through the array of oneForms without actually using Object.keys(oneForm) which is disallowed here
                     arrayOfSameLengthAsTokenAddresses.reduce(
                       (acc, _, index) => {
                         const tokenAddress = tokenAddresses[index];
@@ -1117,48 +1105,6 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
           >
             {allOrOne === "all" ? "Submit All" : "Submit One"}
           </button>
-          {/* show the % of each token that the pool has multiplied by the input amount */}
-          {
-            // if all, show all the tokens, so if there's 30% usdt and 70% eth, show inputAmount*30% usdt and inputAmount*70% eth
-            // allOrOne === "all" ? (
-            //   <div
-            //     className="d-flex justify-content-between align-items-center"
-            //     style={{ width: "100%" }}
-            //   >
-            //     {tokenAddresses.map((tokenAddress) => {
-            //       const oneForm = oneForms[tokenAddress];
-            //       // get the contents of the pool from the pool address
-            //       /** @type {TransformedPool} */
-            //       const pool = state.pools[poolAddress];
-            //       return (
-            //         <div
-            //           key={tokenAddress}
-            //           className="d-flex flex-column align-items-center"
-            //           style={{ width: "100%" }}
-            //         >
-            //           {
-            //             // if the pool has the token, show the % of the pool that the token is
-            //             pool.tokens[tokenAddress] ? (
-            //               <div
-            //                 className="d-flex justify-content-between align-items-center"
-            //                 style={{ width: "100%" }}
-            //               >
-            //                 {/* show the % of the pool that the token is */}
-            //                 <span
-            //                   style={{
-            //                     color: "white",
-            //                     fontSize: "0.8rem",
-            //                     fontWeight: "bold",
-            //                     letterSpacing: "0.033em",
-            //                   }}
-            //                 >
-            //                   {pool.tokens[tokenAddress]}%
-            //                 </span>
-            //                 {/* show the % of the pool that the token is */}
-            //                 <span
-            //           }
-            // })}
-          }
         </div>
       </div>
     </div>
@@ -1178,6 +1124,9 @@ try {
           "linear-gradient(90deg, rgba(15,16,35,1) 0%, rgba(58,33,94,1) 100%)",
       }}
     >
+      <div className="d-flex flex-column align-items-center mb-2">
+        <Web3Connect connectLabel="Connect with Web3" />
+      </div>
       <div
         className="container d-flex flex-column align-items-center"
         // style={{

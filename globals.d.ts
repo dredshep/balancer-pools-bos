@@ -1,16 +1,17 @@
 declare const State: {
   init(obj: object): void;
-  update(obj: object): void;
+  update(obj: Partial<State>): void;
 };
 
 declare const Web3Connect: any;
 declare const Ethers: any;
 declare const ethers: any;
-declare const state: any;
 declare const DropdownMenu: any;
 declare const RadioGroup: any;
 declare const styled: any;
 declare const Popover: any;
+
+declare const state: State;
 
 declare module "Widget" {
   import { ReactNode } from "react";

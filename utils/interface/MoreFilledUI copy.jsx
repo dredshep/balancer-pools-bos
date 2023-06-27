@@ -1,4 +1,17 @@
-// @ts-check
+//@ts-check
+
+/** @typedef {Object} SBalancer @property {string} id @property {number} poolCount @property {string} totalLiquidity */
+/** @typedef {Object} SToken @property {string} name @property {string} symbol @property {string} address @property {number} decimals @property {string} totalBalanceUSD @property {string} totalBalanceNotional @property {string} totalVolumeUSD @property {string} totalVolumeNotional @property {string | null} latestUSDPrice @property {SLatestPrice | null} latestPrice */
+/** @typedef {Object} SLatestPrice @property {string} pricingAsset @property {string} price @property {SPoolId} poolId */
+/** @typedef {Object} SPoolId @property {string} totalWeight */
+/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
+/** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
+/** @typedef {Object} TokenWeights @property {string} address @property {string} weight */
+/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
+/** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
+/** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
+/** @typedef {Object} ChainInfo @property {string} name @property {string} chainId @property {string} shortName @property {string} chain @property {string} network @property {string} networkId @property {{ name: string, symbol: string, decimals: number }} nativeCurrency @property {string[]} rpc @property {string[]} faucets @property {{ name: string, url: string, standard: string }[]} explorers */
+/** @typedef {Object.<string, ChainInfo>} ChainInfoObject */
 
 const graphQlUri =
   "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
@@ -217,6 +230,83 @@ function getTransformedData() {
   return transformedData;
 }
 
+const erc20ABI =
+  // @ts-ignore
+  fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
+/**
+ * @param {{ userAddress: string; poolAddress: string; onError: (error: string) => void; onSuccess: (balance: string) => void; requestConnect: () => void; decimals: number }} props
+ * @returns {(poolAddress: string, userAddress: string) => string}
+ */
+function getGetUserBalance(props) {
+  let missingProps = [];
+
+  if (!props.userAddress) {
+    missingProps = missingProps.concat("userAddress");
+    // return <Web3Connect connectLabel="Connect with Web3" />;
+  }
+
+  if (!props.poolAddress) missingProps = missingProps.concat("poolAddress");
+
+  if (!props.onError) missingProps = missingProps.concat("onError");
+
+  if (!props.onSuccess) missingProps = missingProps.concat("onSuccess");
+
+  if (!props.requestConnect)
+    missingProps = missingProps.concat("requestConnect");
+
+  if (!props.decimals) missingProps = missingProps.concat("decimals");
+
+  if (missingProps.length)
+    throw "missing props" + JSON.stringify(missingProps, null, 2);
+  // State.update({ missingProps });
+
+  // if (state.missingProps.length > 0) {
+  //   return (
+  //     <div>
+  //       <h1>GetBalanceComponent missing props:</h1>
+  //       <pre>{JSON.stringify(state.missingProps, null, 2)}</pre>
+  //     </div>
+  //   );
+  // }
+
+  /**
+   * @param {string} poolAddress
+   * @param {string} userAddress
+   */
+  return function getUserBalance(poolAddress, userAddress) {
+    if (!Ethers.provider()?.getSigner?.()) {
+      props.requestConnect();
+      return;
+    }
+    try {
+      const erc20 = new ethers.Contract(
+        poolAddress, // address
+        erc20ABI, // erc20 abi
+        Ethers.provider().getSigner()
+      );
+      const balance = erc20
+        .balanceOf(userAddress)
+        .then((balance) => {
+          const processedBalance = ethers.utils.formatUnits(
+            balance,
+            props.decimals
+          );
+          props.onSuccess(processedBalance);
+          return processedBalance;
+        })
+        .catch((e) => {
+          props.onError(e);
+        });
+      return balance;
+    } catch (e) {
+      props.onError(`Error in getUserBalance(). params:
+- poolAddress: ${poolAddress}
+- userAddress: ${userAddress}
+- error: ${e}`);
+    }
+  };
+}
+
 const VerticalPair3 = ({ title, value, end }) => {
   const isEnd = !!end;
   return (
@@ -295,6 +385,7 @@ const indexedPoolAddresses = getIndexedPoolAddresses2(transformedData);
  * @property {Object.<string, OneForm>} oneForms - Forms for each token in the pool.
  * @property {boolean} tokenSelectorIsOpen - Indicates whether the token selector dropdown is open.
  * @property {string[]} tokenAddresses - Array containing all the addresses of the tokens it contains.
+ * @property {string | undefined} poolBalance - User's balance of pool tokens.
  */
 
 /**
@@ -346,15 +437,28 @@ const forms = {
         tokenAddresses: indexedPoolAddresses[poolAddress].tokens.map(
           (token) => token.address
         ),
+        poolBalance: undefined,
       };
       return acc;
     },
     {}
   ),
 };
+
+/**
+ * @typedef {Object} State
+ * @property {CurrencySelectorFormGroupsObject} forms - Forms object for the currency selector.
+ */
 State.init({
   forms,
+  // disconnected: true,
+  // userAddress: undefined,
 });
+
+// if (state.disconnected || !state.userAddress) {
+//   // @ts-ignore
+//   return <Web3Connect connectLabel={"Connect with Web3"} />;
+// }
 
 /**
  * Function to find the selected OneForm in a given CurrencySelectorGroup
@@ -574,6 +678,43 @@ function CurrencySelector({ data, poolAddress, className, operation }) {
         ) => oneForm.isSelected
       );
   }
+
+  // const getUserBalance = getGetUserBalance({
+  //   userAddress: state.userAddress,
+  //   decimals: 18,
+  //   onError: (error) => {
+  //     console.log("error", error);
+  //   },
+  //   onSuccess: (balance) => {
+  //     /** @type {CurrencySelectorGroup} */
+  //     const newForm = {
+  //       ...currencySelectorGroup,
+  //       poolBalance: balance,
+  //     };
+  //     updateForm(poolAddress, newForm);
+  //   },
+  //   poolAddress,
+  //   requestConnect: () => {
+  //     State.update({
+  //       disconnected: true,
+  //       userAddress: undefined,
+  //     });
+  //   },
+  // });
+
+  // const balance = getUserBalance(poolAddress, state.userAddress);
+  // /** @type {CurrencySelectorGroup} */
+  // const newForm = {
+  //   ...currencySelectorGroup,
+  //   poolBalance: balance,
+  // };
+
+  // State.update({
+  //   forms: {
+  //     ...state.forms,
+  //     [poolAddress]: newForm,
+  //   },
+  // });
 
   // const tokens = pool.tokens;
   // const tokenSymbols = tokens.map((token) => token.symbol);
@@ -1164,7 +1305,7 @@ try {
                         {/* div with rounded corners on the left side, content is USDT and a down arrow, it's a dropdown */}
                         <VerticalPair3
                           title="Your Balance"
-                          value="NOT IMPLEMENTED"
+                          value={state.forms[pool.address]?.poolBalance}
                           end
                         />
                       </div>

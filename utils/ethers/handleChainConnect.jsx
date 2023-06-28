@@ -1,127 +1,79 @@
+/* put these in a .ts file and leave it open in your editor to have typechecking for this file:
+
+declare const State: {
+  init(obj: object): void;
+  update(obj: Partial<State>): void;
+};
+
+declare const Web3Connect: any;
+declare const Ethers: any;
+declare const ethers: any;
+declare const DropdownMenu: any;
+declare const RadioGroup: any;
+declare const styled: any;
+declare const Popover: any;
+
+declare const state: State;
+
+declare module "Widget" {
+  import { ReactNode } from "react";
+
+  interface WidgetProps {
+    src: string;
+    props: {
+      userAddress: string;
+      poolAddress: string;
+      onError: (errorHandler: () => void) => void;
+      onSuccess: (successHandler: () => void) => void;
+      requestConnect: () => void;
+      decimals: number;
+    };
+  }
+
+  export default function Widget(props: WidgetProps): ReactNode;
+}
+
+declare const props: { chainInfoObject: ChainInfoObject };
+
+interface ChainInfo {
+  name: string;
+  chainId: string;
+  shortName: string;
+  chain: string;
+  network: string;
+  networkId: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpc: string[];
+  faucets: string[];
+  explorers: string[];
+}
+
+interface ChainInfoObject {
+  [key: string]: ChainInfo;
+}
+
+interface State {
+  checkedChainInfo: boolean;
+  errorWrongNetwork: boolean;
+  chainId: string;
+  desiredChainId: string;
+  chainName: string;
+  connected: boolean;
+}
+
+*/
+
 //@ts-check
 
-/**
- * @typedef {Object} SBalancer
- * @property {string} id
- * @property {number} poolCount
- * @property {string} totalLiquidity
- */
-
-/**
- * @typedef {Object} SToken
- * @property {string} name
- * @property {string} symbol
- * @property {string} address
- * @property {number} decimals
- * @property {string} totalBalanceUSD
- * @property {string} totalBalanceNotional
- * @property {string} totalVolumeUSD
- * @property {string} totalVolumeNotional
- * @property {string | null} latestUSDPrice
- * @property {SLatestPrice | null} latestPrice
- */
-
-/**
- * @typedef {Object} SLatestPrice
- * @property {string} pricingAsset
- * @property {string} price
- * @property {SPoolId} poolId
- */
-
-/**
- * @typedef {Object} SPoolId
- * @property {string} totalWeight
- */
-
-/**
- * @typedef {Object} SPool
- * @property {string} id
- * @property {string} address
- * @property {string[]} tokensList
- * @property {string} totalWeight
- * @property {string} totalShares
- * @property {string} holdersCount
- * @property {string} poolType
- * @property {number} poolTypeVersion
- * @property {{ token: SToken }[]} tokens
- */
-
-/**
- * @typedef {Object} SBalancerGQLResponse
- * @property {SBalancer[]} balancers
- * @property {SPool[]} pools
- */
-
-/**
- * @typedef {Object} TokenWeights
- * @property {string} address
- * @property {string} weight
- */
-
-/**
- * @typedef {Object} TransformedPool
- * @property {string} totalValueLocked
- * @property {TokenWeights[]} tokenWeights
- * @property {string} id
- * @property {string} address
- * @property {string[]} tokensList
- * @property {string} totalWeight
- * @property {string} totalShares
- * @property {string} holdersCount
- * @property {string} poolType
- * @property {number} poolTypeVersion
- * @property {SToken[]} tokens
- */
-
-/**
- * @typedef {Object} TransformedData
- * @property {SBalancer[]} balancers
- * @property {TransformedPool[]} pools
- */
-
-/**
- * @typedef {Object} StatePool
- * @property {string} id
- * @property {boolean} approved
- * @property {boolean} depositing
- * @property {boolean} withdrawing
- * @property {boolean} approving
- * @property {boolean} loading
- */
-
-/**
- * @typedef {Object} ChainInfo
- * @property {string} name
- * @property {string} chainId
- * @property {string} shortName
- * @property {string} chain
- * @property {string} network
- * @property {string} networkId
- * @property {{ name: string, symbol: string, decimals: number }} nativeCurrency
- * @property {string[]} rpc
- * @property {string[]} faucets
- * @property {string[]} explorers
- */
-
-/**
- * @typedef {Object.<string, ChainInfo>} ChainInfoObject
- */
-
-State.init({
-  // {poolAddress,balance}
-  checkedChainInfo: false,
-  userBalances: [],
-  // chainInfo: {},
-  chainId: "",
-  chainName: "",
-  errorWrongNetwork: false,
-});
-
 /** @type {ChainInfoObject} */
-const chainInfoObject = {
+const _chainInfoObject = {
   "0x1": {
     name: "Ethereum Mainnet",
-    chainId: "0x1",
+    chainId: "0x1", // 1
     shortName: "eth",
     chain: "ETH",
     network: "mainnet",
@@ -133,19 +85,12 @@ const chainInfoObject = {
     },
     rpc: ["https://main-light.eth.linkpool.io"],
     faucets: [],
-    explorers: [
-      "https://etherscan.io",
-      // {
-      //   name: "etherscan",
-      //   url: "https://etherscan.io",
-      //   standard: "EIP3091",
-      // },
-    ],
+    explorers: ["https://etherscan.io"],
   },
   // goerli
   "0x5": {
     name: "Goerli",
-    chainId: "0x5",
+    chainId: "0x5", // 5
     shortName: "gor",
     chain: "ETH",
     network: "goerli",
@@ -165,7 +110,7 @@ const chainInfoObject = {
   // zkEVM
   "0x44d": {
     name: "zkEVM Mainnet",
-    chainId: "0x44d",
+    chainId: "0x44d", // 1101
     shortName: "zkEVM",
     chain: "ETH",
     network: "mainnet",
@@ -177,46 +122,90 @@ const chainInfoObject = {
     },
     rpc: ["https://rpc.ankr.com/polygon_zkevm"],
     faucets: [],
-    explorers: [
-      "https://zkevm.polygonscan.com",
-      // {
-      //   name: "polygonscan",
-      //   url: "https://zkevm.polygonscan.com",
-      //   standard: "EIP3091",
-      // },
-    ],
+    explorers: ["https://zkevm.polygonscan.com"],
+  },
+  // zkEVM testnet
+  "0x5a2": {
+    name: "zkEVM Testnet",
+    chainId: "0x5a2", // 1442
+    shortName: "zkEVM",
+    chain: "ETH",
+    network: "testnet",
+    networkId: "5a2",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpc: ["https://rpc.testnet.ankr.com/polygon_zkevm"],
+    faucets: [],
+    explorers: ["https://zkevm-testnet.polygonscan.com"],
   },
 };
 
+const chainInfoObject = props.chainInfoObject || _chainInfoObject;
+
+State.init({
+  // {poolAddress,balance}
+  checkedChainInfo: false,
+  // chainInfo: {},
+  chainId: "",
+  desiredChainId: "",
+  chainName: "",
+  errorWrongNetwork: false,
+  connected: false,
+  // connected: false,
+});
+
+/**
+ * @param {string} hexString
+ */
 function removeLeadingZero(hexString) {
-  // Remove '0x' prefix if present
   if (hexString.startsWith("0x")) {
-    hexString = hexString.slice(2);
+    return "0x" + parseInt(hexString, 16).toString(16);
   }
+}
 
-  // Remove leading zero if present
-  if (hexString.startsWith("0")) {
-    hexString = hexString.slice(1);
+/**
+ * @param {string} hexString
+ */
+function parseHex(hexString) {
+  if (hexString.startsWith("0x")) {
+    return parseInt(hexString, 16);
   }
-
-  // Add '0x' prefix and return the modified string
-  return "0x" + hexString;
 }
 
 /**
  * @param {string} chainId
  */
 function switchToChainId(chainId) {
-  // return window.ethereum.request({
-  //   method: "wallet_switchEthereumChain",
-  //   params: [{ chainId: chainId }],
-  // });
   try {
     let send;
+    const noLeadingZeroChainId = removeLeadingZero(chainId);
+    if (!noLeadingZeroChainId) {
+      throw (
+        "Chain ID is invalid, make sure it is hexadecimal starting with 0x: " +
+        chainId
+      );
+    }
     try {
       send = Ethers.send("wallet_switchEthereumChain", [
-        { chainId: removeLeadingZero(chainId) },
+        { chainId: noLeadingZeroChainId },
       ]);
+      console.log(
+        "\ncurrent chainId:",
+        state.chainId,
+        "current chainName:",
+        state.chainName,
+        "\nswitching to chainId:",
+        noLeadingZeroChainId,
+        "chainName:",
+        chainInfoObject[chainId].name,
+        "\nunHexedDecimal:",
+        parseHex(noLeadingZeroChainId),
+        "stored send operation return value:",
+        send
+      );
     } catch (error) {
       console.log(
         "Half-outside, in the catcher for `send = Ethers.send`",
@@ -259,42 +248,22 @@ function listenForRpcError() {
   });
 }
 
-//// Changing the chain refreshes the whole page, so we don't need to listen for chain changes.
-//// in fact, change events are not even fired when the chain is changed.
-// function listenForChainChange() {
-//   return Ethers.on("chainChanged", (/** @type {string} */ chainId) => {
-//     if (chainId !== state.chainInfo.chainId) {
-//       const hexId = removeLeadingZero(ethers.utils.hexlify(chainId));
-//       State.update({
-//         chainId: hexId,
-//         chainName: chainInfoObject[hexId].name,
-//       });
-//       // if chain id is not in chainInfoObject, switch state to errorWrongNetwork
-//       if (!chainInfoObject[chainId]) {
-//         console.log("we don't have this id", chainId);
-//         State.update({ errorWrongNetwork: true });
-//       } else {
-//         console.log("we have this id", chainId);
-//         State.update({ errorWrongNetwork: false });
-//       }
-//     }
-//   });
-// }
-
-// try {
-//   listenForChainChange();
-// } catch (error) {
-//   console.log("Error while listening for chain change", error);
-// }
-
 // get ethers chain id and update state
 function getNetwork() {
-  return Ethers.provider()
-    .getNetwork()
+  const getNetworkReq = Ethers?.provider?.()?.getNetwork?.();
+  // if getNetworkReq is undefined, set State.update({connected: false}), else, set it to true.
+  State.update({ connected: !!getNetworkReq });
+  getNetworkReq
     .then((/** @type {{ chainId: string | number; }} */ network) => {
       const hexId = removeLeadingZero(ethers.utils.hexlify(network.chainId));
+      if (!hexId) {
+        throw (
+          "Chain ID is invalid, make sure it is hexadecimal starting with 0x: " +
+          network.chainId
+        );
+      }
+
       State.update({
-        // convert from number to hex
         chainId: hexId,
         chainName: chainInfoObject[hexId].name,
         checkedChainInfo: true,
@@ -317,9 +286,6 @@ try {
 } catch (error) {
   console.log("2nd TryCatch (promise?): Error while getting network", error);
 }
-// Ethers.send("eth_chainId").then((chainId) => {
-//   State.update({ chainId });
-// });
 
 function MainComponent() {
   // id and name
@@ -333,9 +299,16 @@ function MainComponent() {
   const checkedChainInfo = state.checkedChainInfo;
   return (
     <div className="container">
-      <h1>Chain Switcher:</h1>
+      <h3 className="ms-2">Chain Switcher:</h3>
       <table className="table" style={{ maxWidth: "300px" }}>
         <tbody>
+          {/* this is impossible to do with current methods because the call is cached */}
+          <tr>
+            <td>Connected:</td>
+            <td className={state.connected ? "text-success" : "text-warning"}>
+              {state.connected ? Ethers.provider().connection.url : "No"}
+            </td>
+          </tr>
           <tr>
             <td>Current chain id:</td>
             <td>{chainId}</td>
@@ -351,7 +324,7 @@ function MainComponent() {
             </td>
           </tr>
           <tr>
-            <td>Wrong Network Error:</td>
+            <td>Wrong Network:</td>
             <td>{JSON.stringify(errorWrongNetwork)}</td>
           </tr>
         </tbody>
@@ -364,19 +337,6 @@ function MainComponent() {
           Wrong Network, please switch
         </h5>
       )}
-      {/* <button
-        onClick={() => {
-          switchToChainId("0x1");
-        }}
-      >
-        Switch to Mainnet
-      </button>
-      <button
-        onClick={() => {
-          switchToChainId("0x2a");
-        }}
-      > */}
-      {/* add a small gap */}
       <div
         className="d-flex flex-column gap-2"
         style={{ maxWidth: "300px", marginLeft: "0" }}
@@ -388,11 +348,15 @@ function MainComponent() {
                 switchToChainId(chainId);
               }}
               key={chainId}
+              style={{
+                filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+              }}
             >
               Switch to {chainInfoObject[chainId].name}
             </button>
           );
         })}
+        <Web3Connect connectLabel="Connect with Web3" className="" />
       </div>
     </div>
   );

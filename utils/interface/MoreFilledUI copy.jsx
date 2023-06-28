@@ -10,11 +10,20 @@
 /** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
 /** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
 /** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
-/** @typedef {Object} ChainInfo @property {string} name @property {string} chainId @property {string} shortName @property {string} chain @property {string} network @property {string} networkId @property {{ name: string, symbol: string, decimals: number }} nativeCurrency @property {string[]} rpc @property {string[]} faucets @property {{ name: string, url: string, standard: string }[]} explorers */
-/** @typedef {Object.<string, ChainInfo>} ChainInfoObject */
 
-const graphQlUri =
+const zkEVMGraphQLUri =
   "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
+
+const grahQlUris = {
+  zk: "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest",
+  polyon:
+    "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-polygon-v2",
+  arbitrum:
+    "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-arbitrum-v2",
+  goerli:
+    "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-goerli-v2",
+  mainnet: "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-v2",
+};
 
 /**
  * @description Fetches a URL and returns the body string synchronously
@@ -38,7 +47,7 @@ function getGraphQlQuerySync(query) {
     body: JSON.stringify({ query }),
   };
   // @ts-ignore
-  const { body } = fetch(graphQlUri, options);
+  const { body } = fetch(zkEVMGraphQLUri, options);
   return body.data;
 }
 
@@ -252,7 +261,7 @@ const VerticalPair3 = ({ title, value, end }) => {
         {title}
       </p>
       <p className={"fw-bold" + (isEnd ? " text-end" : "") + " fs-5"}>
-        {value}
+        {value || "-"}
       </p>
     </div>
   );
@@ -288,6 +297,82 @@ const getIndexedTokenAddresses2 = (/** @type {TransformedData} */ data) => {
 const transformedData = getTransformedData();
 const indexedTokenAddresses = getIndexedTokenAddresses2(transformedData);
 const indexedPoolAddresses = getIndexedPoolAddresses2(transformedData);
+
+/********************************
+ * START BALANCE FETCHING THINGY
+ ********************************/
+
+//@ts-check
+
+// State.init({ balance: null, errorGettingBalance: null, isConnected: false });
+const userAddress = Ethers.send("eth_requestAccounts", [])[0];
+State.update({ userAddress });
+
+/**
+ * @param {string} poolAddress
+ * @param {string} userAddress
+ * @returns {string | undefined}
+ */
+
+function getUserBalance(poolAddress, userAddress) {
+  // break if no signer, user disconnected
+  if (!Ethers.provider()?.getSigner?.()) {
+    State.update({
+      userAddress: undefined,
+      errorGettingBalance: "No signer, user disconnected",
+    });
+    console.log("No signer, user disconnected, exiting getUserBalance()");
+    return;
+  }
+  try {
+    const erc20 = new ethers.Contract(
+      poolAddress, // address
+      erc20ABI, // erc20 abi
+      Ethers.provider().getSigner()
+    );
+    const balance = erc20
+      .balanceOf(userAddress)
+      .then((balance) => {
+        // undo big number into a string
+        return ethers.utils.formatUnits(balance, 18);
+      })
+      .catch((e) => {
+        throw e;
+      });
+    return balance;
+  } catch (e) {
+    // return dummy balance 666s
+    return `Error in getUserBalance(). params:
+- poolAddress: ${poolAddress}
+- userAddress: ${userAddress}
+- error: ${e}`;
+  }
+}
+
+/**
+ * @typedef {Object} PoolAndBalance
+ * @property {string} poolAddress
+ * @property {string | undefined} balance
+ */
+
+/**
+ * @returns {PoolAndBalance[]}
+ */
+function getPoolsAndbalances() {
+  return Object.keys(indexedPoolAddresses).map((poolAddress) => {
+    const balance = getUserBalance(poolAddress, userAddress);
+    return {
+      poolAddress,
+      balance,
+    };
+  });
+}
+
+const poolsAndBalances = getPoolsAndbalances();
+
+/********************************
+ * END BALANCE FETCHING THINGY
+ *******************************/
 
 /**
  * Form for a single token in the pool.
@@ -364,7 +449,7 @@ const forms = {
         tokenAddresses: indexedPoolAddresses[poolAddress].tokens.map(
           (token) => token.address
         ),
-        poolBalance: undefined,
+        poolBalance: poolsAndBalances[poolAddress],
       };
       return acc;
     },
@@ -384,117 +469,6 @@ State.init({
   userAddress: undefined,
   errorGettingBalance: undefined,
 });
-
-/********************************
- * BALANCE FETCHING THINGY
- ********************************/
-
-//@ts-check
-
-// State.init({ balance: null, errorGettingBalance: null, isConnected: false });
-const userAddress = Ethers.send("eth_requestAccounts", [])[0];
-State.update({ userAddress });
-
-/**
- * @param {string} poolAddress
- * @param {string} userAddress
- */
-
-function getUserBalance(poolAddress, userAddress) {
-  // break if no signer, user disconnected
-  if (!Ethers.provider()?.getSigner?.()) {
-    State.update({
-      userAddress: undefined,
-      errorGettingBalance: "No signer, user disconnected",
-    });
-    console.log("No signer, user disconnected, exiting getUserBalance()");
-    return;
-  }
-  try {
-    const erc20 = new ethers.Contract(
-      poolAddress, // address
-      erc20ABI, // erc20 abi
-      Ethers.provider().getSigner()
-    );
-    const balance = erc20
-      .balanceOf(userAddress)
-      .then((balance) => {
-        // undo big number into a string
-        return ethers.utils.formatUnits(balance, 18);
-      })
-      .catch((e) => {
-        throw e;
-      });
-    return balance;
-  } catch (e) {
-    // return dummy balance 666s
-    return `Error in getUserBalance(). params:
-- poolAddress: ${poolAddress}
-- userAddress: ${userAddress}
-- error: ${e}`;
-  }
-}
-
-/**
- * @param {CurrencySelectorFormGroupsObject } forms
- */
-function updateFormsBalance(forms) {
-  const addresses = Object.keys(forms);
-  const formsLength = addresses.length;
-  for (let timesDone = 0; timesDone < formsLength; timesDone++) {
-    const poolAddress = addresses[timesDone];
-    const formToChange = forms[poolAddress];
-    try {
-      try {
-        // this errors out and reverts tx if wrong chain cuz wrong params, prolly nonexistent pool error
-        // error looks like this: Uncaught (in promise) Error: missing revert data in call exception; Transaction reverted without a reason string [ See: https://links.ethers.org/v5-errors-CALL_EXCEPTION ] (data="0x", transaction={"from":"0x450e501C21dF2E72B4aE98343746b0654430dC16","to":"0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9","data":"0x70a08231000000000000000000000000e25c0e141b98a5a449fbd70cfda45f6088486c74","accessList":null}, error={"code":-32000,"message":"execution reverted"}, code=CALL_EXCEPTION, version=providers/5.7.2)
-        if (userAddress) {
-          console.log("getting user balance for form ", "#" + timesDone);
-          /** @type {string} */
-          const balance = getUserBalance(poolAddress, userAddress)
-            .then((/** @type {string} */ bal) => {
-              // State.update({ balance: JSON.stringify(bal) });
-              /** @type {CurrencySelectorGroup} */
-              const newForm = {
-                ...formToChange,
-                poolBalance: bal,
-              };
-              updateForm(poolAddress, newForm);
-              return bal;
-            })
-            .catch((/** @type {string} */ e) => {
-              State.update({ errorGettingBalance: JSON.stringify(e) });
-            });
-          console.log("balance", balance);
-        } else {
-          console.log("no user address");
-          // return <Web3Connect connectLabel="Connect with Web3" />;
-        }
-      } catch (e) {
-        console.log(
-          "first error while trying to get user balance w function calls",
-          e
-        );
-      }
-    } catch (e) {
-      console.log(
-        "second error while trying to get user balance w function calls",
-        e
-      );
-    }
-  }
-}
-
-// const formObj = Object.assign({}, state.forms);
-updateFormsBalance(state.forms);
-/********************************
- * END BALANCE FETCHING THINGY
- *******************************/
-
-// if (state.disconnected || !state.userAddress) {
-//   // @ts-ignore
-//   return <Web3Connect connectLabel={"Connect with Web3"} />;
-// }
 
 /**
  * Function to find the selected OneForm in a given CurrencySelectorGroup
@@ -1125,7 +1099,47 @@ try {
       }}
     >
       <div className="d-flex flex-column align-items-center mb-2">
-        <Web3Connect connectLabel="Connect with Web3" />
+        {/* <Web3Connect connectLabel="Connect with Web3" /> */}
+        <Popover.Root>
+          <Popover.Trigger
+            className="btn btn-primary btn-md"
+            style={{
+              filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+            }}
+            // style={{ height: "40px" }}
+          >
+            {userAddress
+              ? "Disconnect | Switch Network"
+              : "Connect wallet with Web3"}
+          </Popover.Trigger>
+          <Popover.Content
+            className="container py-4"
+            style={{
+              width: "max-content",
+              zIndex: 1000,
+              // backgroundColor: "#1e1e1e",
+              backgroundColor: "#f1f1f1",
+              borderRadius: "8px",
+              // apply some deep shadow
+              boxShadow: "0px 0px 20px 0px rgba(0,0,0,0.75)",
+            }}
+          >
+            <Popover.Arrow style={{ fill: "#1e1e1e" }} />
+            <Widget src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/NetworkSwitcherWithInfoTest" />
+          </Popover.Content>
+        </Popover.Root>
+        <h3 className="mt-3 text-white">
+          User address:{" "}
+          <span
+            className="fw-bold"
+            title={state.userAddress}
+            style={{
+              cursor: "pointer",
+            }}
+          >
+            {state.userAddress?.substring(0, 6)}...
+          </span>
+        </h3>
       </div>
       <div
         className="container d-flex flex-column align-items-center"

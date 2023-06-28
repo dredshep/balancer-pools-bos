@@ -12,6 +12,7 @@ declare const styled: any;
 declare const Popover: any;
 
 declare const state: State;
+declare const Widget: any;
 
 declare module "Widget" {
   import { ReactNode } from "react";

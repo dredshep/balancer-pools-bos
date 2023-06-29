@@ -47,71 +47,207 @@
  * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
  */
 
+// /****************************** START OF TEMPORARY *****************************/
+
+// const zkEVMGraphQLUri =
+//   "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
 // /**
-//  * @typedef {Object} Props
-//  * @property {"stake"|"unstake"} operation
-//  * @property {TransformedPool} pool
-//  * @property {string} erc20ABI
-//  * @property {boolean} test
-//  * @property {string} className
+//  * @name calculateTokenWeights
+//  * @description Calculate the token weights in a pool
+//  * @param {SBalancerGQLResponse["pools"][0]} pool
+//  * @returns {{
+//  * address: string,
+//  * weight: string
+//  * }[]}
+//  * @example const tokenWeights = calculateTokenWeights(pool);
+//  * console.log(tokenWeights);
+//  */
+// function calculateTokenWeights(pool) {
+//   const totalValueLocked = calculateTotalValueLocked(pool);
+//   const getWeight = (
+//     /** @type {number} */ value,
+//     /** @type {number} */ decimals
+//   ) =>
+//     (
+//       (value / (Number(totalValueLocked.num) * Number("1e" + decimals))) *
+//       100
+//     ).toFixed(2) + "%";
+//   const weights = pool.tokens.map((_token) => {
+//     const { token } = _token;
+//     const weight = getWeight(parseFloat(token.totalBalanceUSD), token.decimals);
+//     return {
+//       address: token.address,
+//       weight,
+//       token,
+//     };
+//   });
+//   return weights;
+// }
+// /**
+//  * @name formatAndAbbreviateNumber
+//  * @description Formats a number with commas as thousands separators and abbreviates it with a letter suffix
+//  * @param {number} num - The number to format and abbreviate
+//  * @returns {string} The formatted and abbreviated number as a string
+//  * @example const formattedNumber = formatAndAbbreviateNumber(1234567.89);
+//  * console.log(formattedNumber); // "1.23M"
+//  */
+// function formatAndAbbreviateNumber(num) {
+//   let counter = 0;
+//   const abbreviations = ["", "K", "M", "B", "T", "Quadrillion", "Quintillion"];
+
+//   while (num >= 1000) {
+//     num /= 1000;
+//     counter++;
+//   }
+
+//   const stringNum = num.toFixed(2);
+
+//   // Split number into integer and decimal parts
+//   let parts = Number(stringNum).toString().split(".");
+//   // Add commas every three digits to the integer part
+//   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+//   return parts.join(".") + abbreviations[counter];
+// }
+// function calculateTotalValueLocked(pool) {
+//   const totalLiquidity = pool.tokens.reduce((acc, _token) => {
+//     const { token } = _token;
+//     const usdBalance =
+//       parseFloat(token.totalBalanceUSD) / Number("1e" + token.decimals);
+//     if (usdBalance) {
+//       return acc + usdBalance;
+//     }
+//     return acc;
+//   }, 0);
+//   return {
+//     num: totalLiquidity,
+//     str: formatAndAbbreviateNumber(totalLiquidity),
+//   };
+// }
+// /**
+//  * @name runAllInOneQuery
+//  * @description Get the pool data from the Balancer subgraph
+//  * @returns {SBalancerGQLResponse}
+//  * @example const data = runAllInOneQuery();
+//  */
+// function runAllInOneQuery() {
+//   const query = `{
+//     balancers(first: 5) {
+//       id
+//       poolCount
+//       totalLiquidity
+//     }
+//     pools(first: 5) {
+//       id
+//       address
+//       tokensList
+//       totalWeight
+//       totalShares
+//       holdersCount
+//       poolType
+//       poolTypeVersion
+//       tokens {
+//         token {
+//           name
+//           symbol
+//           address
+//           decimals
+//           totalBalanceUSD
+//           totalBalanceNotional
+//           totalVolumeUSD
+//           totalVolumeNotional
+//           latestUSDPrice
+//           latestPrice {
+//             pricingAsset
+//             price
+//             poolId {
+//               totalWeight
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }`;
+//   function getGraphQlQuerySync(query) {
+//     const options = {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({ query }),
+//     };
+//     // @ts-ignore
+//     const { body } = fetch(zkEVMGraphQLUri, options);
+//     return body.data;
+//   }
+//   /** @type {SBalancerGQLResponse} */
+//   const data = getGraphQlQuerySync(query);
+//   return data;
+// }
+// /**
+//  * @name getTransformedData
+//  * @description Get the transformed data from the Balancer subgraph data and the calculations
+//  * @returns {TransformedData}
+//  * @example const data = getTransformedData();
+//  * console.log(data);
 //  */
 
-// /** @type {Props["operation"]} */
-// props.operation = "stake";
-// /** @type {Props["pool"]} */
-// props.pool = {
-//   id: "0x0000000000",
-//   address: "0x0000000000",
-//   tokensList: ["0x0000000000", "0x0000000000"],
-//   totalWeight: "0",
-//   totalShares: "0",
-//   holdersCount: "0",
-//   poolType: "0",
-//   poolTypeVersion: 0,
-//   tokens: [
-//     {
-//       name: "Token 1",
-//       symbol: "TKN1",
-//       address: "0x0000000000",
-//       decimals: 18,
-//       totalBalanceUSD: "0",
-//       totalBalanceNotional: "0",
-//       totalVolumeUSD: "0",
-//       totalVolumeNotional: "0",
-//       latestUSDPrice: "0",
-//       latestPrice: null,
-//     },
-//   ],
-//   totalValueLocked: "0",
-//   tokenWeights: [{ address: "0x0000000000", weight: "0" }],
-// };
-// /** @type {Props["erc20ABI"]} */
-// props.erc20ABI = "asdasd";
-// /** @type {Props["test"]} */
-// props.test = true;
-// /** @type {Props["className"]} */
-// props.className = "";
+// function getTransformedData() {
+//   const data = runAllInOneQuery();
+//   /** @type {TransformedPool[]} */
+//   const transformedPools = data.pools.map((pool) => {
+//     const totalValueLocked = calculateTotalValueLocked(pool).str;
+//     const tokenWeights = calculateTokenWeights(pool);
+//     const flattenedTokens = pool.tokens.map((_token) => {
+//       const { token } = _token;
+//       return token;
+//     });
+//     const tokens = flattenedTokens.sort((a, b) => {
+//       const aBalance = parseFloat(a.totalBalanceUSD);
+//       const bBalance = parseFloat(b.totalBalanceUSD);
+//       return bBalance - aBalance;
+//     });
 
-const missingProps = [];
-// @ts-ignore
-if (!props.operation) missingProps.push("operation");
-// @ts-ignore
-if (!props.pool) missingProps.push("pool");
-// @ts-ignore
-if (!props.erc20ABI) missingProps.push("erc20ABI");
+//     // fill in the rest of the data
+//     return {
+//       ...pool,
+//       tokens,
+//       totalValueLocked,
+//       tokenWeights,
+//     };
+//   });
+//   /** @type {TransformedData} */
+//   const transformedData = {
+//     balancers: data.balancers,
+//     pools: transformedPools,
+//   };
+//   return transformedData;
+// }
+// const transformedData = getTransformedData();
 
-function MissingPropsWarning({ missingProps }) {
-  return (
-    <div className="alert alert-danger">
-      <div className="fw-bold">Missing props:</div>
-      <div>{missingProps.join(", ")}</div>
-    </div>
-  );
-}
-if (missingProps.length) {
-  // @ts-ignore
-  return <MissingPropsWarning missingProps={missingProps} />;
-}
+// const erc20ABI =
+//   // @ts-ignore
+//   fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
+
+// const pool = transformedData.pools[0];
+
+// /****************************** /END OF TEMPORARY *****************************/
+
+// // @ts-ignore
+// if (!props.pool)
+//   // @ts-ignore
+//   return <>Prop required but not provided: pool (type: TransformedPool)</>;
+// /** @type {TransformedPool} */
+// const pool =
+//   // @ts-ignore
+//   props.pool;
+
+// // @ts-ignore
+// if (!props.erc20ABI)
+//   // @ts-ignore
+//   return <>Prop required but not provided: erc20ABI (type: string)</>;
+// /** @type {string} */
+// const erc20ABI =
+//   // @ts-ignore
+//   props.erc20ABI;
 
 /** @type {"stake"|"unstake"} */
 const operation =
@@ -132,11 +268,6 @@ const className =
 const erc20ABI =
   // @ts-ignore
   props.erc20ABI;
-
-/** @type {boolean} */
-const test =
-  // @ts-ignore
-  props.test;
 
 const userAddress = Ethers.send("eth_requestAccounts", [])[0];
 State.update({ userAddress });
@@ -535,7 +666,7 @@ const MyCheckboxItem = styled("DropdownMenu.CheckboxItem")`
 // }
 
 /**
- * @param {{ poolAddress: string, className: string, operation: "stake" | "unstake" }} currencySelectorProps
+ * @param {{ poolAddress: string, className: string, operation: "stake" | "unstake" }} props
  */
 function CurrencySelector({ poolAddress, className, operation }) {
   /** @type {CurrencySelectorGroup} */
@@ -1019,15 +1150,62 @@ function TestComponent() {
   );
 }
 
+// props.test = true;
 function MainReturn() {
-  return test ? (
+  // console.log("my props test is ", props.test);
+  // @ts-ignore
+  return props.test ? (
     <TestComponent />
   ) : (
     <CurrencySelector
-      operation={operation}
+      operation={
+        // @ts-ignore
+        props.operation
+      }
       className={className || ""}
       poolAddress={pool.address}
     />
+  );
+}
+
+/*
+interface CurrencySelectorProps {
+  operation: "stake" | "unstake";
+  poolAddress: string;
+  className?: string;
+  erc20Abi?: string; // we use this for the pools too
+}
+*/
+
+/**
+ * @typedef {Object} CurrencySelectorProps
+ * @property {string} operation
+ * @property {TransformedPool} pool
+ * @property {string} [className]
+ * @property {string} erc20Abi
+ */
+
+/** @type {(keyof CurrencySelectorProps)[]} */
+const requiredProps = ["operation", "pool", "erc20Abi"];
+const missingProps = requiredProps.filter(
+  (prop) =>
+    // @ts-ignore
+    !props[prop]
+);
+
+// @ts-ignore
+props.test = true;
+if (
+  // @ts-ignore
+  !props.test &&
+  missingProps.length
+) {
+  // @ts-ignore
+  return (
+    <div className="alert alert-danger">
+      <div className="fw-bold">Missing props:</div>
+      <div>{missingProps.join(", ")}</div>
+    </div>
   );
 }
 

@@ -330,6 +330,7 @@ function getUserBalance(poolAddress, userAddress) {
       erc20ABI, // erc20 abi
       Ethers.provider().getSigner()
     );
+    if (!userAddress) return;
     const balance = erc20
       .balanceOf(userAddress)
       .then((balance) => {
@@ -337,8 +338,30 @@ function getUserBalance(poolAddress, userAddress) {
         return ethers.utils.formatUnits(balance, 18);
       })
       .catch((e) => {
-        throw e;
+        console.log(
+          "Error in getUserBalance()",
+          e,
+          "more details:",
+          JSON.stringify(
+            {
+              poolAddress,
+              userAddress,
+            },
+            null,
+            2
+          )
+        );
       });
+    console.log(
+      JSON.stringify(
+        {
+          balance,
+          formattedBalance: ethers.utils.formatUnits(balance, 18),
+        },
+        null,
+        2
+      )
+    );
     return balance;
   } catch (e) {
     // return dummy balance 666s
@@ -356,9 +379,10 @@ function getUserBalance(poolAddress, userAddress) {
  */
 
 /**
+ * @param {string} userAddress
  * @returns {PoolAndBalance[]}
  */
-function getPoolsAndbalances() {
+function getPoolsAndbalances(userAddress) {
   return Object.keys(indexedPoolAddresses).map((poolAddress) => {
     const balance = getUserBalance(poolAddress, userAddress);
     return {
@@ -368,7 +392,9 @@ function getPoolsAndbalances() {
   });
 }
 
-const poolsAndBalances = getPoolsAndbalances();
+const poolsAndBalances = state.userAddress
+  ? getPoolsAndbalances(state.userAddress)
+  : [];
 
 /********************************
  * END BALANCE FETCHING THINGY

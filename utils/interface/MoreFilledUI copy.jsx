@@ -1155,15 +1155,16 @@ try {
           </Popover.Content>
         </Popover.Root>
         <h3 className="mt-3 text-white">
-          User address:{" "}
+          {state?.userAddress ? "User address:" : ""}
           <span
             className="fw-bold"
-            title={state.userAddress}
+            title={state?.userAddress ?? "Not connected"}
             style={{
               cursor: "pointer",
             }}
           >
-            {state.userAddress?.substring(0, 6)}...
+            {state?.userAddress?.substring?.(0, 6) ?? "Not connected"}
+            {state?.userAddress ? "..." : ""}
           </span>
         </h3>
       </div>

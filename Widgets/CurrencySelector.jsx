@@ -273,38 +273,82 @@ const indexedTokens = Object.values(pool.tokens).reduce(
   {}
 );
 
-console.log(
-  "checking if pool 0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef is approved to spend 0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"
-);
-let checkedIfApproved = false;
-console.log(
-  "WE'RE APPROVING BOYOS! due to SToken being undefined, I'm checking it here. Token array:",
-  indexedTokens
-);
-const isApprovedResult = isApproved(
-  "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef",
-  "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
-  indexedTokens["0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"],
-  erc20ABI
-);
-const itsAString = typeof isApprovedResult === "string";
-if (itsAString) {
-  console.log("Error getting approval status:", isApprovedResult);
-} else if (isApprovedResult) {
-  const tokenIsApproved = isApprovedResult.then(
-    (/** @type {boolean} */ tokenIsApproved) => {
-      console.log("inner tokenIsApproved", tokenIsApproved);
-      checkedIfApproved = true;
-      return tokenIsApproved;
+// console.log(
+//   "checking if pool 0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef is approved to spend 0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"
+// );
+// let checkedIfApproved = false;
+// console.log(
+//   "WE'RE APPROVING BOYOS! due to SToken being undefined, I'm checking it here. Token array:",
+//   indexedTokens
+// );
+// const isApprovedResult = isApproved(
+//   "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef",
+//   "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
+//   indexedTokens["0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"],
+//   erc20ABI
+// );
+// const itsAString = typeof isApprovedResult === "string";
+// if (itsAString) {
+//   console.log("Error getting approval status:", isApprovedResult);
+// } else if (isApprovedResult) {
+//   const tokenIsApproved = isApprovedResult.then(
+//     (/** @type {boolean} */ tokenIsApproved) => {
+//       console.log("inner tokenIsApproved", tokenIsApproved);
+//       checkedIfApproved = true;
+//       return tokenIsApproved;
+//     }
+//   );
+//   console.log("outer tokenIsApproved", tokenIsApproved);
+// } else {
+//   const resIsNull = isApprovedResult === null;
+//   const resIsUndefined = isApprovedResult === undefined;
+//   console.log("resIsNull", resIsNull);
+//   console.log("resIsUndefined", resIsUndefined);
+//   checkedIfApproved = true;
+// }
+
+const tokenEntries = Object.entries(indexedTokens);
+const tokenEntriesLength = tokenEntries.length;
+const checkedTokens = [];
+
+// check only if checkedTokens.length < tokenEntriesLength
+if (tokenEntriesLength > 0 && checkedTokens.length < tokenEntriesLength) {
+  tokenEntries.forEach(
+    (/** @type {[string, SToken]} */ [tokenAddress, token]) => {
+      const isApprovedResult = isApproved(
+        pool.address,
+        userAddress,
+        token,
+        erc20ABI
+      );
+      const itsAString = typeof isApprovedResult === "string";
+      if (itsAString) {
+        console.log("Error getting approval status:", isApprovedResult);
+      } else if (isApprovedResult) {
+        return isApprovedResult.then(
+          (/** @type {boolean} */ tokenIsApproved) => {
+            // console.log(
+            //   `token ${token.symbol} approval status:`,
+            //   tokenIsApproved
+            // );
+            State.update({
+              indexedApprovedTokens: {
+                ...state.indexedApprovedTokens,
+                [tokenAddress]: tokenIsApproved,
+              },
+            });
+            return tokenIsApproved;
+          }
+        );
+      } else {
+        // const resIsNull = isApprovedResult === null;
+        // const resIsUndefined = isApprovedResult === undefined;
+        // console.log("resIsNull", resIsNull);
+        // console.log("resIsUndefined", resIsUndefined);
+      }
     }
   );
-  console.log("outer tokenIsApproved", tokenIsApproved);
-} else {
-  const resIsNull = isApprovedResult === null;
-  const resIsUndefined = isApprovedResult === undefined;
-  console.log("resIsNull", resIsNull);
-  console.log("resIsUndefined", resIsUndefined);
-  checkedIfApproved = true;
+  // console.log(JSON.stringify(state.indexedApprovedTokens, null, 2));
 }
 
 /**
@@ -313,10 +357,10 @@ if (itsAString) {
  * @param {string} userAddress - The address of the user.
  * @param {SToken} sToken - The sToken object.
  * @param {string} amount - The amount to approve.
- * @param {string} abi - The ABI of the sToken.
+ * @param {string} erc20ABI - The ABI of the sToken.
  * @returns {Promise<string>|string|undefined} - The allowance of the user for the pool, or undefined if there's an error.
  */
-function approve(poolAddress, userAddress, sToken, amount, abi) {
+function approve(poolAddress, userAddress, sToken, amount, erc20ABI) {
   // break if no signer, user disconnected
   if (!Ethers.provider()?.getSigner?.()) {
     State.update({
@@ -328,14 +372,13 @@ function approve(poolAddress, userAddress, sToken, amount, abi) {
   try {
     const tokenContract = new ethers.Contract(
       sToken.address, // address
-      abi, // erc20 abi
+      erc20ABI,
       Ethers.provider().getSigner()
     );
     if (!userAddress) return;
     const allowance = tokenContract
       .approve(poolAddress, amount)
       .then((/** @type {{ toString: () => string; }} */ allowance) => {
-        // console.log(typeof allowance);
         return allowance.toString();
       });
     return allowance;
@@ -364,17 +407,14 @@ function getUserBalance(poolAddress, userAddress) {
   try {
     const erc20 = new ethers.Contract(
       poolAddress, // address
-      erc20ABI, // erc20 abi
+      erc20ABI,
       Ethers.provider().getSigner()
     );
     if (!userAddress) return;
     const balance = erc20
       .balanceOf(userAddress)
       .then((/** @type {{ toString: () => string; }} */ balance) => {
-        // console.log(typeof balance);
         const formattedBalance = ethers.utils.formatUnits(balance, 18);
-        // console.log(formattedBalance);
-        // undo big number into a string
         return formattedBalance;
       });
     return balance;
@@ -402,6 +442,7 @@ function getUserBalance(poolAddress, userAddress) {
  * @property {Object<string, string>} tokenBalances - The nominal balance the user has available in their wallet per token.
  * @property {string | undefined} userAddress - User's address.
  * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
+ * @property {Object<string, boolean>} indexedApprovedTokens - Whether the user has approved the pool to spend their tokens.
  */
 State.init({
   inputAmount: "",
@@ -415,6 +456,7 @@ State.init({
   // disconnected: true,
   userAddress: undefined,
   errorGettingBalance: undefined,
+  indexedApprovedTokens: {},
 });
 
 State.update({
@@ -453,7 +495,6 @@ for (let i = 0; i < tokenCount; i++) {
     }
   });
 }
-// console.log(state.tokenBalances);
 /**
  * @param {string} inputAmount
  */
@@ -666,8 +707,6 @@ const MyCheckboxItem = styled("DropdownMenu.CheckboxItem")`
   ${myItemStyles}
 `;
 
-console.log(state.errorGettingBalance);
-
 /**
  * @param {{ poolBalance: string | undefined; errorGettingBalance: string | undefined; operation: "stake" | "unstake", FormWidget: CurrencySelector}} innerProps
  */
@@ -763,6 +802,15 @@ function StakeUnstakeWidget(innerProps) {
       </Dialog.Content>
     </Dialog.Root>
   );
+}
+
+function checkSelectedTokenIsApproved() {
+  const selectedToken = state.selectedToken; // this is a string (address) | undefined
+  // state.indexedApprovedTokens is Object<string, boolean>
+  if (selectedToken) {
+    return state.indexedApprovedTokens[selectedToken];
+  }
+  return undefined; // this way we can use nullish coalescence (??) to have a default value
 }
 
 /**
@@ -885,6 +933,7 @@ function CurrencySelector({ className, operation }) {
                         borderRadius: "4px",
                         paddingBottom: "0px",
                         width: "max-content",
+                        maxWidth: "170px",
                       }}
                     >
                       {arrayOfSameLengthAsTokenAddresses.map((_, index) => {
@@ -971,9 +1020,10 @@ function CurrencySelector({ className, operation }) {
                     className="alert alert-warning mt-1"
                     style={{
                       fontSize: "14px",
+                      maxWidth: "220px",
                     }}
                   >
-                    Warning: If you unstake more than your balance, the
+                    Warning: If you stake/unstake more than your balance, the
                     transaction will consume gas but will be cancelled.
                   </div>
                 </div>
@@ -984,9 +1034,18 @@ function CurrencySelector({ className, operation }) {
               style={{ width: "100%" }}
             >
               <button
-                className="btn btn-primary btn-sm"
+                className={
+                  "btn btn-sm" +
+                  (state.selectedToken && userAddress
+                    ? " btn-primary"
+                    : " btn-secondary")
+                }
+                disabled={!state.selectedToken || !userAddress}
                 style={{
-                  filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+                  filter:
+                    state.selectedToken && userAddress
+                      ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
+                      : "saturate(0%) brightness(100%)",
                   width: "100%",
                   height: "40px",
                 }}
@@ -997,12 +1056,31 @@ function CurrencySelector({ className, operation }) {
                       console.log("no token selected, cannot stake");
                       return;
                     }
-                    stake(
-                      pool.address,
-                      state.selectedToken,
-                      indexedTokens[state.selectedToken],
-                      state.inputAmount
-                    );
+                    // stake(
+                    //   pool.address,
+                    //   state.selectedToken,
+                    //   indexedTokens[state.selectedToken],
+                    //   state.inputAmount
+                    // );
+                    // check if approved first if not use the approve function
+                    if (checkSelectedTokenIsApproved()) {
+                      stake(
+                        pool.address,
+                        state.selectedToken,
+                        indexedTokens[state.selectedToken],
+                        state.inputAmount
+                      );
+                    } else {
+                      if (state.userAddress) {
+                        approve(
+                          pool.address,
+                          state.userAddress,
+                          indexedTokens[state.selectedToken],
+                          state.inputAmount,
+                          erc20ABI
+                        );
+                      }
+                    }
                   }
                   if (operation === "unstake") {
                     if (!state.selectedToken) {
@@ -1018,7 +1096,11 @@ function CurrencySelector({ className, operation }) {
                   }
                 }}
               >
-                {operation === "stake" ? "Stake" : "Unstake"}
+                {typeof checkSelectedTokenIsApproved() === "boolean"
+                  ? checkSelectedTokenIsApproved()
+                    ? "Stake"
+                    : "Approve"
+                  : "Select a token"}
               </button>
             </div>
           </div>

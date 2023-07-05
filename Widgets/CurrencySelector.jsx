@@ -56,50 +56,92 @@
  * @returns {Promise<boolean>} Promise that resolves with true on success, false on failure.
  */
 
-// /**
-//  * @typedef {Object} Props
-//  * @property {"stake"|"unstake"} operation
-//  * @property {TransformedPool} pool
-//  * @property {string} erc20ABI
-//  * @property {boolean} test
-//  * @property {string} className
-//  */
+/**
+ * @typedef {Object} Props
+ * @property {"stake"|"unstake"} operation
+ * @property {TransformedPool} pool
+ * @property {string} erc20ABI
+ * @property {boolean} test
+ * @property {string} className
+ */
 
-// /** @type {Props["operation"]} */
-// props.operation = "stake";
-// /** @type {Props["pool"]} */
-// props.pool = {
-//   id: "0x0000000000",
-//   address: "0x0000000000",
-//   tokensList: ["0x0000000000", "0x0000000000"],
-//   totalWeight: "0",
-//   totalShares: "0",
-//   holdersCount: "0",
-//   poolType: "0",
-//   poolTypeVersion: 0,
-//   tokens: [
-//     {
-//       name: "Token 1",
-//       symbol: "TKN1",
-//       address: "0x0000000000",
-//       decimals: 18,
-//       totalBalanceUSD: "0",
-//       totalBalanceNotional: "0",
-//       totalVolumeUSD: "0",
-//       totalVolumeNotional: "0",
-//       latestUSDPrice: "0",
-//       latestPrice: null,
-//     },
-//   ],
-//   totalValueLocked: "0",
-//   tokenWeights: [{ address: "0x0000000000", weight: "0" }],
-// };
-// /** @type {Props["erc20ABI"]} */
-// props.erc20ABI = "asdasd";
-// /** @type {Props["test"]} */
-// props.test = true;
-// /** @type {Props["className"]} */
-// props.className = "";
+/** @type {Props["operation"]} */
+props.operation = "stake";
+/** @type {Props["pool"]} */
+props.pool = {
+  id: "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef000200000000000000000020",
+  address: "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef",
+  tokensList: [
+    "0xa2036f0538221a77a3937f1379699f44945018d0",
+    "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+  ],
+  tokenWeights: [
+    {
+      address: "0xa2036f0538221a77a3937f1379699f44945018d0",
+      weight: "0.5",
+    },
+    {
+      address: "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+      weight: "0.5",
+    },
+  ],
+  totalValueLocked: "2",
+  totalWeight: "1",
+  totalShares: "5.559483084822705174",
+  holdersCount: "2",
+  poolType: "Weighted",
+  poolTypeVersion: 4,
+  tokens: [
+    {
+      name: "Matic Token",
+      symbol: "MATIC",
+      address: "0xa2036f0538221a77a3937f1379699f44945018d0",
+      decimals: 18,
+      totalBalanceUSD: "0",
+      totalBalanceNotional: "524.526715569650686347",
+      totalVolumeUSD: "1596.28395398633399141053847844533",
+      totalVolumeNotional: "0",
+      latestUSDPrice: null,
+      latestPrice: null,
+    },
+    {
+      name: "USD Coin",
+      symbol: "USDC",
+      address: "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+      decimals: 6,
+      totalBalanceUSD: "30444.551589",
+      totalBalanceNotional: "30444.551589",
+      totalVolumeUSD: "6964.227925",
+      totalVolumeNotional: "0",
+      latestUSDPrice: "0.9999999999999999999999999999999999",
+      latestPrice: {
+        pricingAsset: "0x16c9a4d841e88e52b51936106010f27085a529ec",
+        price: "0.9999999723110625373984519813985565",
+        poolId: {
+          totalWeight: "0",
+        },
+      },
+    },
+  ],
+};
+/** @type {Props["erc20ABI"]} */
+props.erc20ABI =
+  // @ts-ignore
+  fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
+/** @type {Props["test"]} */
+props.test = true;
+/** @type {Props["className"]} */
+props.className = "";
+/** @type {StakeUnstakeCallback} */
+props.stake = async (poolAddress, userAddress, sToken, abi) => (
+  console.log("stake", poolAddress, userAddress, sToken, abi), true
+);
+/** @type {StakeUnstakeCallback} */
+props.unstake = async (poolAddress, userAddress, sToken, abi) => (
+  console.log("unstake", poolAddress, userAddress, sToken, abi), true
+);
+/** @type {string} */
+props.poolBalance = "0";
 
 const missingProps = [];
 // @ts-ignore
@@ -112,6 +154,8 @@ if (!props.erc20ABI) missingProps.push("erc20ABI (string)");
 if (!props.stake) missingProps.push("stake (StakeUnstakeCallback)");
 // @ts-ignore
 if (!props.unstake) missingProps.push("unstake (StakeUnstakeCallback)");
+// @ts-ignore
+if (!props.poolBalance) missingProps.push("poolBalance (string)");
 
 function MissingPropsWarning({ missingProps }) {
   return (
@@ -163,6 +207,143 @@ const stake =
 
 const userAddress = Ethers.send("eth_requestAccounts", [])[0];
 State.update({ userAddress });
+
+/**
+ * Checks if the user has approved the pool to spend their tokens.
+ * @param {string} poolAddress - The address of the pool.
+ * @param {string} userAddress - The address of the user.
+ * @param {SToken} sToken - The sToken object.
+ * @param {string} abi - The ABI of the sToken.
+ * @returns {Promise<boolean>|string|undefined} - The allowance of the user for the pool, or undefined if there's an error.
+ */
+function isApproved(poolAddress, userAddress, sToken, abi) {
+  // break if no signer, user disconnected
+  if (!Ethers.provider()?.getSigner?.()) {
+    State.update({
+      userAddress: undefined,
+    });
+    console.log("No signer, user disconnected, exiting isApproved()");
+    return;
+  }
+  try {
+    let checkedPoolAddress, checkedUserAddress, checkedTokenAddress;
+    try {
+      checkedPoolAddress = ethers.utils.getAddress(poolAddress);
+      checkedUserAddress = ethers.utils.getAddress(userAddress);
+      checkedTokenAddress = ethers.utils.getAddress(sToken.address);
+    } catch (error) {
+      console.log("isApproved() error while checking addresses", error);
+      console.log("poolAddress", poolAddress);
+      console.log("userAddress", userAddress);
+      console.log("sToken.address", sToken.address);
+      console.log("checkedPoolAddress", checkedPoolAddress);
+      console.log("checkedUserAddress", checkedUserAddress);
+      console.log("checkedTokenAddress", checkedTokenAddress);
+      return;
+    }
+    if (!userAddress) return;
+    const tokenContract = new ethers.Contract(
+      checkedTokenAddress,
+      abi,
+      Ethers.provider()?.getSigner?.()
+    );
+    const allowance = tokenContract
+      .allowance(userAddress, poolAddress)
+      .then((/** @type {{ gt: (bignum: any) => boolean; }} */ allowance) => {
+        // console.log(typeof allowance);
+        return allowance.gt(ethers.utils.parseUnits("0", sToken.decimals));
+      });
+    return allowance;
+  } catch (error) {
+    console.log("isApproved() error", error);
+    return;
+  }
+}
+
+const indexedTokens = Object.values(pool.tokens).reduce(
+  (
+    /** @type {Object<string, SToken>} */
+    acc,
+    /** @type {SToken} */
+    token
+  ) => {
+    acc[token.address] = token;
+    return acc;
+  },
+  {}
+);
+
+console.log(
+  "checking if pool 0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef is approved to spend 0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"
+);
+let checkedIfApproved = false;
+console.log(
+  "WE'RE APPROVING BOYOS! due to SToken being undefined, I'm checking it here. Token array:",
+  indexedTokens
+);
+const isApprovedResult = isApproved(
+  "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef",
+  "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
+  indexedTokens["0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"],
+  erc20ABI
+);
+const itsAString = typeof isApprovedResult === "string";
+if (itsAString) {
+  console.log("Error getting approval status:", isApprovedResult);
+} else if (isApprovedResult) {
+  const tokenIsApproved = isApprovedResult.then(
+    (/** @type {boolean} */ tokenIsApproved) => {
+      console.log("inner tokenIsApproved", tokenIsApproved);
+      checkedIfApproved = true;
+      return tokenIsApproved;
+    }
+  );
+  console.log("outer tokenIsApproved", tokenIsApproved);
+} else {
+  const resIsNull = isApprovedResult === null;
+  const resIsUndefined = isApprovedResult === undefined;
+  console.log("resIsNull", resIsNull);
+  console.log("resIsUndefined", resIsUndefined);
+  checkedIfApproved = true;
+}
+
+/**
+ * Checks if the user has approved the pool to spend their tokens.
+ * @param {string} poolAddress - The address of the pool.
+ * @param {string} userAddress - The address of the user.
+ * @param {SToken} sToken - The sToken object.
+ * @param {string} amount - The amount to approve.
+ * @param {string} abi - The ABI of the sToken.
+ * @returns {Promise<string>|string|undefined} - The allowance of the user for the pool, or undefined if there's an error.
+ */
+function approve(poolAddress, userAddress, sToken, amount, abi) {
+  // break if no signer, user disconnected
+  if (!Ethers.provider()?.getSigner?.()) {
+    State.update({
+      userAddress: undefined,
+    });
+    console.log("No signer, user disconnected, exiting approve()");
+    return;
+  }
+  try {
+    const tokenContract = new ethers.Contract(
+      sToken.address, // address
+      abi, // erc20 abi
+      Ethers.provider().getSigner()
+    );
+    if (!userAddress) return;
+    const allowance = tokenContract
+      .approve(poolAddress, amount)
+      .then((/** @type {{ toString: () => string; }} */ allowance) => {
+        // console.log(typeof allowance);
+        return allowance.toString();
+      });
+    return allowance;
+  } catch (error) {
+    console.log("approve() error", error);
+    return;
+  }
+}
 
 /**
  * @param {string} poolAddress
@@ -224,15 +405,22 @@ function getUserBalance(poolAddress, userAddress) {
  */
 State.init({
   inputAmount: "",
-  lastValidInput: 0,
+  lastValidInput: "",
   selectedToken: undefined,
   tokenSelectorIsOpen: false,
+  // @ts-ignore
   form: {},
   poolBalance: undefined,
   tokenBalances: {},
   // disconnected: true,
   userAddress: undefined,
   errorGettingBalance: undefined,
+});
+
+State.update({
+  poolBalance:
+    // @ts-ignore
+    props.poolBalance,
 });
 
 // for each token in the pool, find its balance and update state.tokenBalances["tokenAddress"] = balance
@@ -357,32 +545,32 @@ if (!updated) {
 }
 updated = true;
 
-function getUserBalanceOnceAndUpdateState() {
-  const balanceProcessor = getUserBalance(pool.address, userAddress);
-  if (typeof balanceProcessor === "string") {
-    console.log(
-      "Error getting balance using getUserBalanceOnceAndUpdateState():",
-      balanceProcessor
-    );
-    return;
-  }
-  if (balanceProcessor && balanceProcessor.then) {
-    balanceProcessor.then((newBalance) => {
-      State.update({
-        poolBalance: newBalance,
-      });
-    });
-  } else {
-    console.log(
-      "Got balance using getUserBalanceOnceAndUpdateState(); it was undefined."
-    );
-  }
-}
-let updatedBalance;
-if (!updatedBalance) {
-  getUserBalanceOnceAndUpdateState();
-}
-updatedBalance = true;
+// function getUserBalanceOnceAndUpdateState() {
+//   const balanceProcessor = getUserBalance(pool.address, userAddress);
+//   if (typeof balanceProcessor === "string") {
+//     console.log(
+//       "Error getting balance using getUserBalanceOnceAndUpdateState():",
+//       balanceProcessor
+//     );
+//     return;
+//   }
+//   if (balanceProcessor && balanceProcessor.then) {
+//     balanceProcessor.then((newBalance) => {
+//       State.update({
+//         poolBalance: newBalance,
+//       });
+//     });
+//   } else {
+//     console.log(
+//       "Got balance using getUserBalanceOnceAndUpdateState(); it was undefined."
+//     );
+//   }
+// }
+// let updatedBalance;
+// if (!updatedBalance) {
+//   getUserBalanceOnceAndUpdateState();
+// }
+// updatedBalance = true;
 
 /**
  * @returns {OneForm | null} - The selected OneForm if found, null otherwise.
@@ -478,139 +666,126 @@ const MyCheckboxItem = styled("DropdownMenu.CheckboxItem")`
   ${myItemStyles}
 `;
 
-const indexedTokens = Object.values(pool.tokens).reduce(
-  (
-    /** @type {Object<string, SToken>} */
-    acc,
-    /** @type {SToken} */
-    token
-  ) => {
-    acc[token.address] = token;
-    return acc;
-  },
-  {}
-);
+console.log(state.errorGettingBalance);
 
 /**
- * @param {{ poolAddress: string, className: string, operation: "stake" | "unstake" }} currencySelectorProps
+ * @param {{ poolBalance: string | undefined; errorGettingBalance: string | undefined; operation: "stake" | "unstake", FormWidget: CurrencySelector}} innerProps
  */
-function CurrencySelector({ poolAddress, className, operation }) {
+function StakeUnstakeWidget(innerProps) {
+  const poolBalance = innerProps.poolBalance;
+  const operation = innerProps.operation;
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger
+        className={
+          (operation === "stake" ? "btn-primary" : "btn-secondary") +
+          " btn btn-lg fw-bold border-0"
+        }
+        style={{
+          letterSpacing: "0.033em",
+          // desaturate completely and lighten by 50%
+          filter:
+            operation === "stake"
+              ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
+              : "saturate(0%) brightness(100%)",
+        }}
+      >
+        <div>{operation === "stake" ? "Stake" : "Unstake"}</div>
+      </Dialog.Trigger>
+      <Dialog.Content
+        className="rounded-4"
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          top: 0,
+          left: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0, 0, 0, 0.5)",
+          zIndex: 1,
+        }}
+      >
+        <div className="card bg-dark text-light rounded-4 shadow border-0 p-3">
+          <div className="card-header">
+            <h5 className="card-title  d-flex align-items-center justify-content-between">
+              <div>{operation === "stake" ? "Stake" : "Unstake"}</div>
+              <Dialog.Close className="btn btn-sm bg-secondary border-0 pt-2 ps-2 pe-2">
+                {/* <button className="btn btn-sm btn-secondary border-0 rounded-circle d-flex justify-content-center"> */}
+                <div className="">
+                  <i className="bi bi-x-lg"></i>
+                </div>
+                {/* </button> */}
+              </Dialog.Close>
+            </h5>
+          </div>
+          <div className="card-body">
+            {/* <p className="card-text">
+              <span className="fw-bold">Your Balance:</span>{" "}
+              {poolBalance}
+            </p> */}
+            <innerProps.FormWidget className="" operation="stake" />
+            {/* <Dialog.Close
+              className="btn btn-lg btn-secondary me-3 fw-bold border-0"
+              style={{
+                letterSpacing: "0.033em",
+                // desaturate completely and lighten by 50%
+                filter: "saturate(0%) brightness(100%)",
+              }}
+            >
+              Cancel
+            </Dialog.Close> */}
+            {/* <button
+                className="btn btn-lg btn-primary fw-bold border-0"
+                // dataSide="top"
+                // dataAlign="end"
+                style={{
+                  letterSpacing: "0.033em",
+                  filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+                }}
+              >
+                {operation === "stake" ? "Stake" : "Unstake"}
+              </button> */}
+          </div>
+        </div>
+
+        {/* <Widget
+        src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeForm"
+        props={{
+          pool,
+          operation: "unstake",
+          erc20ABI: erc20ABI,
+          stake: () => {},
+          unstake: () => {},
+        }}
+      /> */}
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+/**
+ * @callback CurrencySelector
+ * @param {{ className: string, operation: "stake" | "unstake" }} currencySelectorProps
+ * @returns {React.JSX.Element}
+ */
+function CurrencySelector({ className, operation }) {
   /** @type {CurrencySelectorGroup} */
   const currencySelectorGroup = state.form;
-  const { allOrOne, oneForms, tokenAddresses } = currencySelectorGroup;
+  const { oneForms, tokenAddresses } = currencySelectorGroup;
   /** @type {number[]} */
   const arrayOfSameLengthAsTokenAddresses = [...Array(tokenAddresses.length)];
 
   return (
     <div className={className}>
       <div className="d-flex flex-column container py-2 pb-3">
-        {/* title */}
-        <div
-          className="d-flex justify-content-between align-items-center"
-          style={{
-            marginBottom: "0.25rem",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "20px",
-              fontWeight: "bold",
-            }}
-          >
-            {operation === "stake" ? "Stake" : "Unstake"}
-          </div>
-        </div>
         {!state.userAddress ? (
           <h6>No user address available, connect wallet.</h6>
         ) : (
           <div className="d-flex flex-column">
-            <div className="d-flex align-items-center mb-2">
-              {undefined && operation === "unstake" && (
-                <RadioGroup.Root>
-                  <RadioGroup.RadioGroup
-                    value={allOrOne}
-                    style={{
-                      backgroundColor: "transparent",
-                      // make height 40px
-                      height: "40px",
-                      width: "100%",
-                    }}
-                    onValueChange={(
-                      /** @type {"all" | "one"} */
-                      newAllOrOne
-                    ) => {
-                      console.log("newAllOrOne", newAllOrOne);
-                      return handleRadioChange(poolAddress, newAllOrOne);
-                    }}
-                  >
-                    <RadioGroup.Item
-                      value="all"
-                      style={{
-                        fontWeight: allOrOne === "all" ? "bold" : "normal",
-                        backgroundColor:
-                          allOrOne === "all" ? "#6e4ac5" : "#585858",
-                        borderTopLeftRadius: "4px",
-                        borderBottomLeftRadius: "4px",
-                        height: "40px",
-                        border: "0px",
-                        color: "white",
-                        letterSpacing:
-                          allOrOne === "all" ? "0.033em" : "0.01em",
-                        padding: "4px 16px",
-                      }}
-                    >
-                      <RadioGroup.Indicator />
-                      <label
-                        className="form-check-label"
-                        style={{
-                          cursor: "pointer",
-                        }}
-                        // highlight if selected
-                      >
-                        All
-                      </label>
-                    </RadioGroup.Item>
-                    {/* </RadioGroup.Indicator> */}
-                    <RadioGroup.Item
-                      value="one"
-                      style={{
-                        cursor: "pointer",
-                        fontWeight: allOrOne === "one" ? "bold" : "normal",
-                        // Background is 6e4ac5 if selected, otherwise it's 585858
-                        backgroundColor:
-                          allOrOne === "one" ? "#6e4ac5" : "#585858",
-                        // round corners to the right by 4 px
-                        borderTopRightRadius: "4px",
-                        borderBottomRightRadius: "4px",
-                        height: "40px",
-                        border: "0px",
-                        color: "white",
-                        letterSpacing:
-                          allOrOne === "one" ? "0.033em" : "0.01em",
-                        // horizontal padding is 16px and vertical padding is 4px
-                        padding: "4px 16px",
-                      }}
-                    >
-                      <RadioGroup.Indicator>
-                        {/* <>One</> */}
-                      </RadioGroup.Indicator>
-                      <label
-                        className="form-check-label"
-                        style={{
-                          cursor: "pointer",
-                        }}
-                      >
-                        One
-                      </label>
-                    </RadioGroup.Item>
-                  </RadioGroup.RadioGroup>
-                  {/* </RadioGroup.Content> */}
-                </RadioGroup.Root>
-              )}
-            </div>
             {/* here goes the title: "Input Amount" */}
-            {(operation === "stake" ||
-              (operation === "unstake" && allOrOne === "one")) && (
+            {(operation === "stake" || operation === "unstake") && (
               <>
                 <div className="d-flex flex-row my-2">
                   <div
@@ -666,7 +841,7 @@ function CurrencySelector({ poolAddress, className, operation }) {
                     >
                       {tokenAddresses.length === 0 ? (
                         <></>
-                      ) : allOrOne === "one" || operation === "stake" ? (
+                      ) : (
                         // if one is selected, show the selected token
                         <span
                           style={{
@@ -695,9 +870,6 @@ function CurrencySelector({ poolAddress, className, operation }) {
                             )
                           }
                         </span>
-                      ) : (
-                        // if all is selected, show "All"
-                        "All"
                       )}
                       <span className="ms-1">
                         <i className="bi bi-caret-down-fill"></i>
@@ -766,7 +938,7 @@ function CurrencySelector({ poolAddress, className, operation }) {
                   }}
                 >
                   {operation === "unstake"
-                    ? "(Max: " + state.poolBalance
+                    ? "(Max: " + props.poolBalance
                     : state.selectedToken
                     ? "(Max: " + state.tokenBalances[state.selectedToken] + ")"
                     : undefined}
@@ -870,11 +1042,7 @@ function TestComponent() {
           width: "250px",
         }}
       >
-        <CurrencySelector
-          className="my-2"
-          operation="stake"
-          poolAddress={pool.address}
-        />
+        <CurrencySelector className="my-2" operation="stake" />
       </div>
       <Web3Connect connectLabel="Connect wallet with Web3" className="mb-3" />
       <h2>User Balance:</h2>
@@ -891,13 +1059,17 @@ function MainReturn() {
   return test ? (
     <TestComponent />
   ) : (
-    <CurrencySelector
-      operation={operation}
-      className={className || ""}
-      poolAddress={pool.address}
-    />
+    <CurrencySelector operation={operation} className={className || ""} />
   );
 }
 
 // @ts-ignore
-return <MainReturn />;
+// return <MainReturn />;
+return (
+  <StakeUnstakeWidget
+    poolBalance={poolBalance}
+    errorGettingBalance={errorGettingBalance}
+    operation={operation}
+    FormWidget={CurrencySelector}
+  />
+);

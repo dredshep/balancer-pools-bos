@@ -1,5 +1,5 @@
 declare const State: {
-  init(obj: object): void;
+  init(obj: State): void;
   update(obj: Partial<State>): void;
 };
 
@@ -10,6 +10,7 @@ declare const DropdownMenu: any;
 declare const RadioGroup: any;
 declare const styled: any;
 declare const Popover: any;
+declare const Dialog: any;
 
 declare const state: State;
 declare const Widget: any;

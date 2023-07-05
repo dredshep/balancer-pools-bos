@@ -40,12 +40,6 @@
  * Forms object for the currency selector. There's one per pool address, and inside we'll have a mini form per token in the "one", and a form for the "all".
  * @typedef {Object.<string, CurrencySelectorGroup>} CurrencySelectorFormGroupsObject
  */
-/**
- * @typedef {Object} State
- * @property {CurrencySelectorFormGroupsObject} forms - Forms object for the currency selector.
- * @property {string | undefined} userAddress - User's address.
- * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
- */
 
 /****************************** START OF TEMPORARY *****************************/
 
@@ -241,6 +235,211 @@ props.pool = transformedData.pools[0];
 
 /****************************** /END OF TEMPORARY *****************************/
 
+/**
+ * @typedef {Object} State
+ * @property {string | undefined} poolBalance - The user's balance of the pool's tokens
+ * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
+ * @property {"stake" | "unstake" | false} downOpen - Error message when trying to get the user's balance, if any.
+ * @property {string | undefined} userAddress - The user's address
+ */
+
+State.init({
+  poolBalance: undefined,
+  errorGettingBalance: undefined,
+  downOpen: false,
+  userAddress: undefined,
+});
+
+const userAddress = Ethers.send("eth_requestAccounts", [])[0];
+State.update({ userAddress });
+
+/**
+ * @param {string} poolAddress
+ * @param {string} userAddress
+ */
+function getUserBalance(poolAddress, userAddress) {
+  // break if no signer, user disconnected
+  if (!Ethers.provider()?.getSigner?.()) {
+    State.update({
+      userAddress: undefined,
+      errorGettingBalance: "No signer, user disconnected",
+    });
+    console.log("No signer, user disconnected, exiting getUserBalance()");
+    return;
+  }
+  try {
+    const erc20 = new ethers.Contract(
+      poolAddress, // address
+      erc20ABI, // erc20 abi
+      Ethers.provider().getSigner()
+    );
+    if (!userAddress) return;
+    const balance = erc20
+      .balanceOf(userAddress)
+      .then((/** @type {{ toString: () => string; }} */ balance) => {
+        // console.log(typeof balance);
+        const formattedBalance = ethers.utils.formatUnits(balance, 18);
+        // console.log(formattedBalance);
+        // undo big number into a string
+        return formattedBalance;
+      });
+    return balance;
+  } catch (e) {
+    // return dummy balance 666s
+    return `Error in getUserBalance(). params:
+- poolAddress: ${poolAddress}
+- userAddress: ${userAddress}
+- error: ${e}`;
+  }
+}
+
+/**
+ * @param {string | undefined} poolAddress
+ * @param {string | undefined} userAddress
+ */
+function getUserBalanceOnceAndUpdateState(poolAddress, userAddress) {
+  if (!userAddress) {
+    console.log("No user address, exiting getUserBalanceOnceAndUpdateState()");
+    return;
+  }
+  if (!poolAddress) {
+    console.log("No pool address, exiting getUserBalanceOnceAndUpdateState()");
+    return;
+  }
+  const balanceProcessor = getUserBalance(poolAddress, userAddress);
+  if (typeof balanceProcessor === "string") {
+    console.log(
+      "Error getting balance using getUserBalanceOnceAndUpdateState():",
+      balanceProcessor
+    );
+    return;
+  }
+  if (balanceProcessor && balanceProcessor.then) {
+    balanceProcessor.then((newBalance) => {
+      State.update({
+        poolBalance: newBalance,
+      });
+    });
+  } else {
+    console.log(
+      "Got balance using getUserBalanceOnceAndUpdateState(); it was undefined."
+    );
+  }
+}
+let updatedBalance;
+if (!updatedBalance) {
+  getUserBalanceOnceAndUpdateState(props.pool.address, state.userAddress);
+}
+updatedBalance = true;
+
+/**
+ * @param {{ poolBalance: string | undefined; errorGettingBalance: string | undefined; operation: "stake" | "unstake"}} props
+ */
+function StakeUnstakeWidget(props) {
+  const poolBalance = props.poolBalance;
+  const errorGettingBalance = props.errorGettingBalance;
+  const operation = props.operation;
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger
+        className={
+          (operation === "stake" ? "btn-primary" : "btn-secondary") +
+          " btn btn-lg fw-bold border-0"
+        }
+        style={{
+          letterSpacing: "0.033em",
+          // desaturate completely and lighten by 50%
+          filter:
+            operation === "stake"
+              ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
+              : "saturate(0%) brightness(100%)",
+        }}
+      >
+        {operation === "stake" ? "Stake" : "Unstake"}
+      </Dialog.Trigger>
+      <Dialog.Content
+        className="rounded-4"
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          top: 0,
+          left: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0, 0, 0, 0.5)",
+          zIndex: 1,
+        }}
+      >
+        <div className="card bg-dark text-light rounded-4 shadow border-0 p-3">
+          <div className="card-header">
+            <h5 className="card-title">
+              {operation === "stake" ? "Stake" : "Unstake"}
+            </h5>
+          </div>
+          <div className="card-body">
+            <p className="card-text">
+              <span className="fw-bold">Your Balance:</span>{" "}
+              {/* {state.forms[pool.address]?.poolBalance} */}
+              {props.poolBalance}
+            </p>
+            <div className="d-flex justify-content-end">
+              <Dialog.Close
+                className="btn btn-lg btn-secondary me-3 fw-bold border-0"
+                style={{
+                  letterSpacing: "0.033em",
+                  // desaturate completely and lighten by 50%
+                  filter: "saturate(0%) brightness(100%)",
+                }}
+              >
+                Cancel
+              </Dialog.Close>
+              <button
+                className="btn btn-lg btn-primary fw-bold border-0"
+                // dataSide="top"
+                // dataAlign="end"
+                style={{
+                  letterSpacing: "0.033em",
+                  filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+                }}
+              >
+                {operation === "stake" ? "Stake" : "Unstake"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* <Widget
+        src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeForm"
+        props={{
+          pool,
+          operation: "unstake",
+          erc20ABI: erc20ABI,
+          stake: () => {},
+          unstake: () => {},
+        }}
+      /> */}
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+function getPoolBalance({}) {
+  const userAddress = Ethers.signer().getAddress();
+  if (!userAddress) State.update({ errorGettingBalance: "Not connected" });
+  const { pool } = props;
+  const { tokens } = pool;
+  const tokenAddresses = tokens.map((token) => token.address);
+  const contract = new ethers.Contract(
+    userAddress,
+    erc20ABI,
+    Ethers.provider().getSigner()
+  );
+  const balance = contract.balanceOf(pool.address);
+  return balance;
+}
+
 // @ts-ignore
 if (!props.pool)
   // @ts-ignore
@@ -281,7 +480,6 @@ function MainComponent() {
       className="card bg-dark text-light rounded-4 shadow border-0 p-3"
       style={{
         width: "450px",
-        // brightness up by 10%
         filter: "brightness(110%)",
       }}
     >
@@ -299,13 +497,6 @@ function MainComponent() {
         <div className="">
           <div className="row">
             <div className="col-md-6">
-              {/* <VerticalPair3>
-                      Pool Type: {pool.poolType} {pool.poolTypeVersion}
-                    </VerticalPair3>
-                    <VerticalPair3>
-                      Total Value Locked: {pool.totalValueLockedETH} ETH / $
-                      {pool.totalValueLockedUSD}
-                    </VerticalPair3> */}
               <VerticalPair
                 end={false}
                 title="Pool Type"
@@ -338,9 +529,7 @@ function MainComponent() {
               >
                 <thead>
                   <tr>
-                    {/* uppercase font secondary */}
                     <th className="fw-bold">Token</th>
-                    {/* uppercase font secondary */}
                     <th className="fw-bold">Weight</th>
                   </tr>
                 </thead>
@@ -378,162 +567,26 @@ function MainComponent() {
           </div>
           {/* align to the right */}
           <div className="mt-3 d-flex justify-content-end">
-            {/* <CurrencySelector poolAddress={pool.address} data={data} /> */}
             <div className="d-flex flex-column align-items-end">
-              {/* <p className="text-end fs-3">
-                      Your Balance: {pool.userBalance}
-                    </p> */}
               <div className="d-flex justify-self-end">
-                {/* div with rounded corners on the left side, content is USDT and a down arrow, it's a dropdown */}
                 <VerticalPair
                   title="Your Balance"
-                  value={state.forms[pool.address]?.poolBalance}
+                  value={state.poolBalance}
                   end
                 />
               </div>
-              <div className="d-flex justify-content-end">
-                {/* <button
-                          className="btn btn-lg btn-secondary me-3 fw-bold border-0"
-                          style={{
-                            letterSpacing: "0.033em",
-                            // desaturate completely and lighten by 50%
-                            filter: "saturate(0%) brightness(100%)",
-                          }}
-                        >
-                          Unstake
-                        </button> */}
-                <Popover.Root>
-                  <Popover.Trigger
-                    className="btn btn-lg btn-secondary me-3 fw-bold border-0"
-                    style={{
-                      letterSpacing: "0.033em",
-                      // desaturate completely and lighten by 50%
-                      filter: "saturate(0%) brightness(100%)",
-                    }}
-                  >
-                    Unstake
-                  </Popover.Trigger>
-                  <Popover.Content
-                    sideOffset={10}
-                    alignOffset={10}
-                    // make it appear at the top of the button to the left
-                    side="top"
-                    align="end"
-                  >
-                    <Popover.Arrow
-                      // arrow is black, make it secondary, it's a svg contained inside this element as a child
-                      style={{
-                        fill: "var(--bs-secondary)",
-                        // seems to be a tiny bit ligher than the content, so make it a bit darker
-                        filter: "brightness(81%)",
-                      }}
-                    />
-                    <div className="card bg-dark text-light rounded-4 shadow border-0 p-3">
-                      <div className="card-header">
-                        <h5 className="card-title">Unstake</h5>
-                      </div>
-                      <div className="card-body">
-                        <p className="card-text">
-                          <span className="fw-bold">Your Balance:</span>{" "}
-                          {state.forms[pool.address]?.poolBalance}
-                        </p>
-                        <div className="d-flex justify-content-end">
-                          <button
-                            className="btn btn-lg btn-secondary me-3 fw-bold border-0"
-                            style={{
-                              letterSpacing: "0.033em",
-                              // desaturate completely and lighten by 50%
-                              filter: "saturate(0%) brightness(100%)",
-                            }}
-                          >
-                            Unstake
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* <Widget
-                      src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeForm"
-                      props={{
-                        pool,
-                        operation: "unstake",
-                        erc20ABI: erc20ABI,
-                        stake: () => {},
-                        unstake: () => {},
-                      }}
-                    /> */}
-                  </Popover.Content>
-                </Popover.Root>
-                <Popover.Root
-                  style={
-                    {
-                      // display: "relative",
-                    }
-                  }
-                >
-                  {/* <Popover.Anchor
-                            style={{
-                              display: "absolute",
-                              // make it like 200 pixels above the button
-                              top: "-200px",
-                              // make it like 50 pixels to the left of the button
-                              left: "-50px",
-                            }}
-                          > */}
-                  <Popover.Trigger
-                    className="btn btn-lg btn-primary fw-bold border-0"
-                    // dataSide="top"
-                    // dataAlign="end"
-                    style={{
-                      letterSpacing: "0.033em",
-                      filter:
-                        "hue-rotate(40deg) saturate(80%) brightness(115%)",
-                    }}
-                  >
-                    Stake
-                  </Popover.Trigger>
-                  {/* </Popover.Anchor> */}
-                  {/* put the content as absolute and on top left */}
-                  <Popover.Content
-                    sideOffset={10}
-                    alignOffset={10}
-                    // make it appear at the top of the button
-                    side="top"
-                    align="end"
-                  >
-                    <Popover.Arrow
-                      // arrow is black, make it secondary, it's a svg contained inside this element as a child
-                      style={{
-                        fill: "var(--bs-secondary)",
-                        // seems to be a tiny bit ligher than the content, so make it a bit darker
-                        filter: "brightness(81%)",
-                      }}
-                    />
-
-                    <Widget
-                      src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeForm"
-                      props={{
-                        pool,
-                        operation: "unstake",
-                        erc20ABI: erc20ABI,
-                        stake: () => {},
-                        unstake: () => {},
-                      }}
-                    />
-                  </Popover.Content>
-                </Popover.Root>
-                {/* <button
-                          className="btn btn-lg btn-primary fw-bold border-0"
-                          style={{
-                            letterSpacing: "0.033em",
-                            filter:
-                              "hue-rotate(40deg) saturate(80%) brightness(115%)",
-                          }}
-                        >
-                          Stake
-                        </button> */}
+              <div className="d-flex justify-content-end gap-3">
+                <StakeUnstakeWidget
+                  errorGettingBalance={state.errorGettingBalance}
+                  operation="unstake"
+                  poolBalance={state.poolBalance}
+                />
+                <StakeUnstakeWidget
+                  errorGettingBalance={state.errorGettingBalance}
+                  operation="stake"
+                  poolBalance={state.poolBalance}
+                />
               </div>
-              {/* <StakeForm poolAddress={pool.id} */}
             </div>
           </div>
         </div>
@@ -543,4 +596,10 @@ function MainComponent() {
 }
 
 // @ts-ignore
-return <MainComponent />;
+return (
+  <div className="d-flex flex-column gap-2">
+    <Web3Connect connectLabel="Connect Wallet" />
+    <MainComponent />
+    <MainComponent />
+  </div>
+);

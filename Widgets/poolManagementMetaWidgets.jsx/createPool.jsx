@@ -130,16 +130,16 @@ const createPool = async () => {
   try {
     const tokens = [
       "0x88267177EC1420648Ba7CBFef824f14B9F637985", // TestDSO
-      "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC", // Jeff TT1
-    ];
+      "0x6A1Ab80d1B161844948CC75C965C0D0242dbc630", // DTT2 (Dredshep Test Token 2)
+    ].sort();
     const weights = [
-      ethers.utils.parseEther("45"),
-      ethers.utils.parseEther("5"),
-    ]; // 45:5 i.e. 90:10
+      ethers.utils.parseEther("0.5"),
+      ethers.utils.parseEther("0.5"),
+    ]; // 90:10 ratio
     const swapFee = ethers.utils.parseEther("0.1");
     const owner = "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57"; // The owner address
-    const name = "Dred Test Pool, Thanks ChatGPT!"; // The name of the pool
-    const symbol = "Weighted-Dred"; // The symbol of the pool
+    const name = "Dredshep Test Pool"; // The name of the pool
+    const symbol = "Weighted-Shep"; // The symbol of the pool
     const salt = ethers.utils.hexZeroPad("0x1", 32); // Adjust accordingly
 
     const provider = Ethers.provider();
@@ -152,6 +152,11 @@ const createPool = async () => {
       signer
     );
 
+    // const rateProviders = new Array(tokens.length).fill(
+    //   "0x0000000000000000000000000000000000000000"
+    // ); // Array of zeroes
+    const rateProviders = tokens;
+    console.log("rateProviders:", rateProviders);
     const gasLimit = 6000000; // Adjust accordingly
     // Create the pool
     const promise = poolFactory
@@ -161,7 +166,7 @@ const createPool = async () => {
         symbol,
         tokens,
         weights,
-        [],
+        rateProviders,
         swapFee,
         owner,
         salt,
@@ -171,14 +176,43 @@ const createPool = async () => {
         // Wait for the tx to be mined
         const createReceipt = createTx.wait();
 
-        console.log("Pool created:", { createReceipt });
+        console.log("Pool creation TX emitted:", { createReceipt });
         return createReceipt;
+      })
+      ?.then?.((createReceipt) => {
+        console.log("Pool creation receipt:", { createReceipt });
+        // Get the pool address
+        const address = createReceipt.logs[0].address;
+        console.log("Pool address:", { address });
+        return address;
+      })
+      ?.then?.((poolAddress) => {
+        // Get the pool
+        const pool = new ethers.Contract(
+          poolAddress,
+          fetchBody(
+            "https://gist.githubusercontent.com/dredshep/728298ed3649bb12cd2c3638e0e1e2fb/raw/f693fa47f70791362b0a824350b35241e271ee06/balancerVaultABI.json"
+          ), // The ABI of the WeightedPool
+          signer
+        );
+
+        console.log("Pool:", { pool });
+        return pool;
       })
       ?.catch?.((e) => {
         console.log("INNER CATCH, Error creating pool:", e);
+        if (e.receipt) {
+          console.log("Transaction Receipt:", e.receipt);
+        }
       });
   } catch (e) {
     console.log("Error:", e);
   }
 };
-createPool();
+// createPool();
+
+// works but doens't give pool address yet.
+// history for self-rememberance: https://i.imgur.com/Bi56Nvs.png
+
+// @ts-ignore
+return <button onClick={createPool}>Create Pool</button>;

@@ -69,38 +69,32 @@
 props.operation = "stake";
 /** @type {Props["pool"]} */
 props.pool = {
-  id: "0x88267177EC1420648Ba7CBFef824f14B9F637985000000000000000000000002",
-  address: "0x016b7366f76aa2794097798b90cf239796aeff8d",
+  id: "F99DF032566BEA02D68E02AB98DAFFE96BB834C5000200000000000000000013",
+  address: "0xf99df032566BEA02D68E02AB98dafFE96BB834C5",
   tokensList: [
     "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-    "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
-    "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
+    "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
   ],
   tokenWeights: [
     {
       address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-      weight: "0.5",
+      weight: "0.9",
     },
     {
-      address: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
-      weight: "0.5",
-    },
-    {
-      address: "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
-      weight: "0",
+      address: "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
+      weight: "0.1",
     },
   ],
   totalValueLocked: "0",
   totalWeight: "0",
   totalShares: "0",
   holdersCount: "0",
-  poolType: "YearnLinear",
+  poolType: "No idea, not in GQL",
   poolTypeVersion: 2,
   tokens: [
     {
       name: "Test Dedso",
-      symbol: "TDSO",
-      // address: "0x016b7366f76aa2794097798b90cf239796aeff8d",
+      symbol: "TestDSO",
       address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
       decimals: 18,
       totalBalanceUSD: "0",
@@ -111,27 +105,15 @@ props.pool = {
       latestPrice: null,
     },
     {
-      name: "Wrapped Ether",
-      symbol: "WETH",
-      address: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
+      name: "Jeff Test Token 1",
+      symbol: "Jeff-TT1",
+      address: "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
       decimals: 18,
       totalBalanceUSD: "0",
-      totalBalanceNotional: "0",
+      totalBalanceNotional: "5192296858534827.628530496329220095",
       totalVolumeUSD: "0",
       totalVolumeNotional: "0",
-      latestUSDPrice: null,
-      latestPrice: null,
-    },
-    {
-      name: "DO NOT USE - Mock Yearn Token",
-      symbol: "TEST",
-      address: "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
-      decimals: 18,
-      totalBalanceUSD: "0",
-      totalBalanceNotional: "0",
-      totalVolumeUSD: "0",
-      totalVolumeNotional: "0",
-      latestUSDPrice: null,
+      latestUSDPrice: "0",
       latestPrice: null,
     },
   ],
@@ -170,6 +152,30 @@ struct JoinPoolRequest {
     // false
     bool fromInternalBalance;
 }
+
+// // javascript example
+// function joinPool(
+//   /** \@type {string} *\/ poolId,
+//   /** \@type {string} *\/ sender,
+//   /** \@type {string} *\/ recipient,
+//   /** \@type {string[]} *\/ sortedTokenAddresses,
+//   /** \@type {string[]} *\/ maxAmountsIn, // this is the max amount of each token you want to send in, we can use the inputted amount for this
+//   /** \@type {string} *\/ userData,
+//   /** \@type {boolean} *\/ fromInternalBalance
+// ) {
+//   const types = ['bytes32', 'address', 'address', 'address[]', 'uint256[]', 'bytes', 'bool'];
+//   const data = [poolId, sender, recipient, sortedTokenAddresses, maxAmountsIn, userData, fromInternalBalance];
+//   const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
+//   // execute the transaction
+//   const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider)
+//   // vault takes 4 args: poolId, sender, recipient, JoinPoolRequest
+//   // joinPoolRequest is an array with 4 args: assets, maxAmountsIn, userData, fromInternalBalance
+//   const txPromise = vault.joinPool(poolId, sender, recipient, [sortedTokenAddresses, maxAmountsIn, userDataEncoded, fromInternalBalance])
+//   tx.then((tx) => {
+//     console.log(tx)
+//   })
+// }
+
 
 // Create the Vault contract
 // const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider)
@@ -213,7 +219,7 @@ const types = ['uint256', 'uint256', 'uint256'];
 // [EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, bptAmountIn, exitTokenIndex];
 const data = [0, BPT_AMOUNT_IN, 0];
 const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
-***
+***/
 
 /**
  * Joins a pool by sending a transaction to the Balancer contract.
@@ -279,18 +285,6 @@ async function exitPool(poolId, sender, recipient, exitAmount, contract) {
   } catch (err) {
     console.log(err);
   }
-}
-
-/**
- * Creates a new instance of a Balancer pool contract.
- * @param {string} address - The address of the Balancer pool contract.
- * @returns {Object} - The Balancer pool contract instance.
- */
-function makePoolContract(address) {
-  const abi = erc20ABI;
-  const signer = Ethers.provider().getSigner();
-  const contract = new ethers.Contract(address, abi, signer);
-  return contract;
 }
 
 /** @type {string} */

@@ -69,58 +69,70 @@
 props.operation = "stake";
 /** @type {Props["pool"]} */
 props.pool = {
-  id: "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef000200000000000000000020",
-  address: "0x01e4464604ad0167d9dccda63ecd471b0ca0f0ef",
+  id: "0x88267177EC1420648Ba7CBFef824f14B9F637985000000000000000000000002",
+  address: "0x016b7366f76aa2794097798b90cf239796aeff8d",
   tokensList: [
-    "0xa2036f0538221a77a3937f1379699f44945018d0",
-    "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+    "0x88267177EC1420648Ba7CBFef824f14B9F637985",
+    "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
+    "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
   ],
   tokenWeights: [
     {
-      address: "0xa2036f0538221a77a3937f1379699f44945018d0",
+      address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
       weight: "0.5",
     },
     {
-      address: "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+      address: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
       weight: "0.5",
+    },
+    {
+      address: "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
+      weight: "0",
     },
   ],
-  totalValueLocked: "2",
-  totalWeight: "1",
-  totalShares: "5.559483084822705174",
-  holdersCount: "2",
-  poolType: "Weighted",
-  poolTypeVersion: 4,
+  totalValueLocked: "0",
+  totalWeight: "0",
+  totalShares: "0",
+  holdersCount: "0",
+  poolType: "YearnLinear",
+  poolTypeVersion: 2,
   tokens: [
     {
-      name: "Matic Token",
-      symbol: "MATIC",
-      address: "0xa2036f0538221a77a3937f1379699f44945018d0",
+      name: "Test Dedso",
+      symbol: "TDSO",
+      // address: "0x016b7366f76aa2794097798b90cf239796aeff8d",
+      address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
       decimals: 18,
       totalBalanceUSD: "0",
-      totalBalanceNotional: "524.526715569650686347",
-      totalVolumeUSD: "1596.28395398633399141053847844533",
+      totalBalanceNotional: "5192296858534827.628530496329220095",
+      totalVolumeUSD: "0",
+      totalVolumeNotional: "0",
+      latestUSDPrice: "0",
+      latestPrice: null,
+    },
+    {
+      name: "Wrapped Ether",
+      symbol: "WETH",
+      address: "0x7b79995e5f793a07bc00c21412e50ecae098e7f9",
+      decimals: 18,
+      totalBalanceUSD: "0",
+      totalBalanceNotional: "0",
+      totalVolumeUSD: "0",
       totalVolumeNotional: "0",
       latestUSDPrice: null,
       latestPrice: null,
     },
     {
-      name: "USD Coin",
-      symbol: "USDC",
-      address: "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
-      decimals: 6,
-      totalBalanceUSD: "30444.551589",
-      totalBalanceNotional: "30444.551589",
-      totalVolumeUSD: "6964.227925",
+      name: "DO NOT USE - Mock Yearn Token",
+      symbol: "TEST",
+      address: "0x9129e834e15ea19b6069e8f08a8ecfc13686b8dc",
+      decimals: 18,
+      totalBalanceUSD: "0",
+      totalBalanceNotional: "0",
+      totalVolumeUSD: "0",
       totalVolumeNotional: "0",
-      latestUSDPrice: "0.9999999999999999999999999999999999",
-      latestPrice: {
-        pricingAsset: "0x16c9a4d841e88e52b51936106010f27085a529ec",
-        price: "0.9999999723110625373984519813985565",
-        poolId: {
-          totalWeight: "0",
-        },
-      },
+      latestUSDPrice: null,
+      latestPrice: null,
     },
   ],
 };
@@ -140,6 +152,147 @@ props.stake = async (poolAddress, userAddress, sToken, abi) => (
 props.unstake = async (poolAddress, userAddress, sToken, abi) => (
   console.log("unstake", poolAddress, userAddress, sToken, abi), true
 );
+
+/***
+function joinPool(
+    bytes32 poolId,
+    address sender,
+    address recipient,
+    JoinPoolRequest memory request
+) external payable;
+
+struct JoinPoolRequest {
+    // [ASSET_A, ASSET_B] - MUST BE SORTED ALPHABETICALLY
+    address[] assets;
+    // [ASSET_A_AMOUNT, ASSET_B_AMOUNT]
+    uint256[] maxAmountsIn;
+    bytes userData;
+    // false
+    bool fromInternalBalance;
+}
+
+// Create the Vault contract
+// const vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider)
+
+
+const types = ['uint256', 'uint256[]', 'uint256'];
+// [EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, minimumBPT];
+const data = [ARRAY_OF_TOKENS_IN, ARRAY_OF_TOKENS_IN_AMOUNT, 0];
+const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
+
+// Exact Tokens Join
+// userData ABI
+// ['uint256', 'uint256[]', 'uint256']
+// userData
+
+https://docs.balancer.fi/reference/joins-and-exits/pool-joins.html#userdata
+
+    function exitPool(
+    bytes32 poolId,
+    address sender,
+    address payable recipient,
+    ExitPoolRequest memory request
+) external;
+
+struct ExitPoolRequest {
+    address[] assets;
+    uint256[] minAmountsOut;
+    bytes userData;
+    bool toInternalBalance;
+}
+
+enum ExitKind {
+    EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, // 0
+    EXACT_BPT_IN_FOR_TOKENS_OUT, // 1
+    BPT_IN_FOR_EXACT_TOKENS_OUT, // 2
+    MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
+}
+
+// BPT = Balancer Pool Token
+const types = ['uint256', 'uint256', 'uint256'];
+// [EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, bptAmountIn, exitTokenIndex];
+const data = [0, BPT_AMOUNT_IN, 0];
+const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
+***
+
+/**
+ * Joins a pool by sending a transaction to the Balancer contract.
+ * @param {string} poolId - The ID of the pool to join.
+ * @param {string} sender - The address of the sender.
+ * @param {string} recipient - The address of the recipient.
+ * @param {string} joinAmount - The amount of tokens to join the pool with.
+ * @param {Object} contract - The Balancer contract instance.
+ * @returns {Promise<Object>} - The transaction receipt.
+ */
+async function joinPool(poolId, sender, recipient, joinAmount, contract) {
+  const request = {
+    assets: [
+      /* array of token addresses involved in the transaction */
+    ],
+    maxAmountsIn: [
+      /* array of maximum amounts of tokens the sender is willing to send. In your case, it would be [joinAmount] */
+    ],
+    userData: ethers.utils.defaultAbiCoder.encode(
+      [0],
+      [joinAmount] // Join amount
+    ),
+    fromInternalBalance: false, // Or true, if you're using Balancer's internal balances
+  };
+
+  try {
+    const tx = await contract.joinPool(poolId, sender, recipient, request);
+    const receipt = await tx.wait();
+    return receipt;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+/**
+ * Exits a pool by sending a transaction to the Balancer contract.
+ * @param {string} poolId - The ID of the pool to exit.
+ * @param {string} sender - The address of the sender.
+ * @param {string} recipient - The address of the recipient.
+ * @param {string} exitAmount - The amount of pool tokens to exit.
+ * @param {Object} contract - The Balancer contract instance.
+ * @returns {Promise<Object>} - The transaction receipt.
+ */
+async function exitPool(poolId, sender, recipient, exitAmount, contract) {
+  const request = {
+    assets: [
+      /* array of token addresses involved in the transaction */
+    ],
+    minAmountsOut: [
+      /* array of minimum amounts of tokens the sender is willing to receive. In your case, it would be [exitAmount] */
+    ],
+    userData: ethers.utils.defaultAbiCoder.encode(
+      [0],
+      [exitAmount] // Exit amount
+    ),
+    toInternalBalance: false, // Or true, if you're using Balancer's internal balances
+  };
+
+  try {
+    const tx = await contract.exitPool(poolId, sender, recipient, request);
+    const receipt = await tx.wait();
+    return receipt;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+/**
+ * Creates a new instance of a Balancer pool contract.
+ * @param {string} address - The address of the Balancer pool contract.
+ * @returns {Object} - The Balancer pool contract instance.
+ */
+function makePoolContract(address) {
+  const abi = erc20ABI;
+  const signer = Ethers.provider().getSigner();
+  const contract = new ethers.Contract(address, abi, signer);
+  return contract;
+}
+
 /** @type {string} */
 props.poolBalance = "0";
 
@@ -350,6 +503,190 @@ if (tokenEntriesLength > 0 && checkedTokens.length < tokenEntriesLength) {
   );
   // console.log(JSON.stringify(state.indexedApprovedTokens, null, 2));
 }
+
+const balancerPoolAbiFetch = fetch(
+  "https://gist.githubusercontent.com/dredshep/728298ed3649bb12cd2c3638e0e1e2fb/raw/f693fa47f70791362b0a824350b35241e271ee06/balancerVaultABI.json"
+);
+// @ts-ignore
+const balancerPoolAbi = balancerPoolAbiFetch.body;
+
+// create pool thing
+// const createPool = async () => {
+//   console.log("Create pool");
+//   try {
+//     const proxyAddress = "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57";
+
+//     const tokens = [
+//       // testdso
+//       "0x88267177EC1420648Ba7CBFef824f14B9F637985",
+//       // jeff tt1
+//       "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
+//     ];
+//     const balances = [
+//       ethers.utils.parseEther("1"),
+//       ethers.utils.parseUnits("62607572233557", "wei"),
+//     ]; // 1 DAI, ~0.0000626 WETH
+//     const weights = [
+//       ethers.utils.parseUnits("45", 18),
+//       ethers.utils.parseUnits("5", 18),
+//     ]; // 45:5 i.e. 90:10
+//     const swapFee = ethers.utils.parseEther("0.1");
+
+//     const bActionsInterface = new ethers.utils.Interface(balancerPoolAbi);
+//     const data = bActionsInterface.encodeFunctionData("create", [
+//       "0x7920BFa1b2041911b354747CA7A6cDD2dfC50Cfd",
+//       tokens,
+//       balances,
+//       weights,
+//       swapFee,
+//       true,
+//     ]);
+
+//     console.log("Create pool encoded data:", { data });
+//     // const provider = new ethers.providers.Web3Provider(window.ethereum);
+//     const provider = Ethers.provider();
+//     const signer = provider.getSigner();
+//     const dsProxyContract = new ethers.Contract(
+//       proxyAddress,
+//       DSProxyAbi.abi,
+//       signer
+//     );
+
+//     console.log("Executing DS proxy contract");
+//     const result = await dsProxyContract.execute(B_ACTIONS_ADDRESS, data);
+
+//     console.log("DS proxy result: ", { result });
+//   } catch (e) {
+//     console.log("DS proxy error:", e);
+//   }
+// };
+
+// create pool second attempt
+// const createPool2 = async () => {
+//   console.log("Create pool");
+//   try {
+//     const tokens = [
+//       // testdso
+//       "0x88267177EC1420648Ba7CBFef824f14B9F637985",
+//       // jeff tt1
+//       "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
+//     ];
+//     const balances = [
+//       ethers.utils.parseEther("1"),
+//       ethers.utils.parseUnits("62607572233557", "wei"),
+//     ]; // 1 DAI, ~0.0000626 WETH
+//     const weights = [
+//       ethers.utils.parseUnits("45", 18),
+//       ethers.utils.parseUnits("5", 18),
+//     ]; // 45:5 i.e. 90:10
+//     const swapFee = ethers.utils.parseEther("0.1");
+
+//     // const bActionsInterface = new ethers.utils.Interface(balancerPoolAbi);
+//     const provider = Ethers.provider();
+//     const signer = provider.getSigner();
+//     const bActionsContract = new ethers.Contract(
+//       "0xBA12222222228d8Ba445958a75a0704d566BF2C8", // B_ACTIONS_ADDRESS, -- vault??
+//       balancerPoolAbi,
+//       signer
+//     );
+
+//     let poolCreationPromise;
+//     try {
+//       console.log("POOL CREATION TRY - Creating pool via direct transaction");
+//       poolCreationPromise = bActionsContract.create(
+//         "0x7920BFa1b2041911b354747CA7A6cDD2dfC50Cfd", // B_FACTORY_ADDRESS, - WeightedPoolFactory??
+//         tokens,
+//         balances,
+//         weights,
+//         swapFee,
+//         true
+//       );
+//     } catch (e) {
+//       console.log(
+//         "POOL CREATION tryCATCH - Creating pool via direct transaction, trying to .catch, error:",
+//         e
+//       );
+//       poolCreationPromise.catch((e) => {
+//         console.log(
+//           "POOL CREATION promiseCATCH - Creating pool via direct transaction, .catch, error:",
+//           e
+//         );
+//       });
+//     }
+//     console.log(
+//       "Console log after promise, if nothing is logged, promise is running in background, if nothing logs after, promise failed without catch, or it finished successfully without then."
+//     );
+//   } catch (e) {
+//     console.log("createPool2 outer tryCatch error:", e);
+//   }
+// };
+// createPool2();
+/**
+ * Fetches the body of a URL
+ * @param {string} str The URL to fetch
+ * @returns {string} The body of the URL
+ */
+function fetchBody(str) {
+  // @ts-ignore
+  return fetch(str).body;
+}
+const createPool = async () => {
+  console.log("Create pool");
+  try {
+    const tokens = [
+      "0x88267177EC1420648Ba7CBFef824f14B9F637985", // TestDSO
+      "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC", // Jeff TT1
+    ];
+    const weights = [
+      ethers.utils.parseEther("45"),
+      ethers.utils.parseEther("5"),
+    ]; // 45:5 i.e. 90:10
+    const swapFee = ethers.utils.parseEther("0.1");
+    const owner = "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57"; // The owner address
+    const name = "Dred Test Pool, Thanks ChatGPT!"; // The name of the pool
+    const symbol = "Weighted-Dred"; // The symbol of the pool
+    const salt = ethers.utils.hexZeroPad("0x1", 32); // Adjust accordingly
+
+    const provider = Ethers.provider();
+    const signer = provider.getSigner();
+    const poolFactory = new ethers.Contract(
+      "0x7920BFa1b2041911b354747CA7A6cDD2dfC50Cfd", // WeightedPoolFactory address
+      fetchBody(
+        "https://gist.githubusercontent.com/dredshep/728298ed3649bb12cd2c3638e0e1e2fb/raw/19f0870f18af90930f172cb18ed1572343736993/balancerWeightedPoolFactoryABI.json"
+      ), // The ABI of the WeightedPoolFactory
+      signer
+    );
+
+    const gasLimit = 6000000; // Adjust accordingly
+    // Create the pool
+    const promise = poolFactory
+      .create(
+        // const createTx = await
+        name,
+        symbol,
+        tokens,
+        weights,
+        [],
+        swapFee,
+        owner,
+        salt,
+        { gasLimit }
+      )
+      .then?.((createTx) => {
+        // Wait for the tx to be mined
+        const createReceipt = createTx.wait();
+
+        console.log("Pool created:", { createReceipt });
+        return createReceipt;
+      })
+      ?.catch?.((e) => {
+        console.log("INNER CATCH, Error creating pool:", e);
+      });
+  } catch (e) {
+    console.log("Error:", e);
+  }
+};
+createPool();
 
 /**
  * Checks if the user has approved the pool to spend their tokens.
@@ -1148,10 +1485,18 @@ function MainReturn() {
 // @ts-ignore
 // return <MainReturn />;
 return (
-  <StakeUnstakeWidget
-    poolBalance={poolBalance}
-    errorGettingBalance={errorGettingBalance}
-    operation={operation}
-    FormWidget={CurrencySelector}
-  />
+  <div className="d-flex gap-3">
+    <StakeUnstakeWidget
+      poolBalance={poolBalance}
+      errorGettingBalance={errorGettingBalance}
+      operation={operation === "stake" ? "unstake" : "stake"}
+      FormWidget={CurrencySelector}
+    />
+    <StakeUnstakeWidget
+      poolBalance={poolBalance}
+      errorGettingBalance={errorGettingBalance}
+      operation={operation}
+      FormWidget={CurrencySelector}
+    />
+  </div>
 );

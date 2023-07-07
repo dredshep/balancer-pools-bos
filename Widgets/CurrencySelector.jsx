@@ -69,51 +69,51 @@
 props.operation = "stake";
 /** @type {Props["pool"]} */
 props.pool = {
-  id: "F99DF032566BEA02D68E02AB98DAFFE96BB834C5000200000000000000000013",
-  address: "0xf99df032566BEA02D68E02AB98dafFE96BB834C5",
+  id: "0x1002b479766d0f7977ab06473e03f0cd5ee3c54b000200000000000000000014",
+  address: "0x1002b479766d0f7977ab06473e03f0cd5ee3c54b",
   tokensList: [
-    "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-    "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
+    "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
+    "0x88267177ec1420648ba7cbfef824f14b9f637985",
   ],
+  totalWeight: "1",
+  totalShares: "0",
+  holdersCount: "0",
+  poolType: "Weighted",
+  poolTypeVersion: 4,
   tokenWeights: [
     {
-      address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-      weight: "0.9",
+      address: "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
+      weight: "0.5",
     },
     {
-      address: "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
-      weight: "0.1",
+      address: "0x88267177ec1420648ba7cbfef824f14b9f637985",
+      weight: "0.5",
     },
   ],
   totalValueLocked: "0",
-  totalWeight: "0",
-  totalShares: "0",
-  holdersCount: "0",
-  poolType: "No idea, not in GQL",
-  poolTypeVersion: 2,
   tokens: [
     {
-      name: "Test Dedso",
-      symbol: "TestDSO",
-      address: "0x88267177EC1420648Ba7CBFef824f14B9F637985",
+      name: "Dredshep Test Token 2",
+      symbol: "DTT2",
+      address: "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
       decimals: 18,
       totalBalanceUSD: "0",
-      totalBalanceNotional: "5192296858534827.628530496329220095",
+      totalBalanceNotional: "0",
       totalVolumeUSD: "0",
       totalVolumeNotional: "0",
-      latestUSDPrice: "0",
+      latestUSDPrice: null,
       latestPrice: null,
     },
     {
-      name: "Jeff Test Token 1",
-      symbol: "Jeff-TT1",
-      address: "0x756DE3FF9517CA64E9059BA3Dc9a5a24cB5A19FC",
+      name: "Test Dredso",
+      symbol: "TDSO",
+      address: "0x88267177ec1420648ba7cbfef824f14b9f637985",
       decimals: 18,
       totalBalanceUSD: "0",
-      totalBalanceNotional: "5192296858534827.628530496329220095",
+      totalBalanceNotional: "0",
       totalVolumeUSD: "0",
       totalVolumeNotional: "0",
-      latestUSDPrice: "0",
+      latestUSDPrice: null,
       latestPrice: null,
     },
   ],
@@ -356,14 +356,14 @@ const userAddress = Ethers.send("eth_requestAccounts", [])[0];
 State.update({ userAddress });
 
 /**
- * Checks if the user has approved the pool to spend their tokens.
+ * Checks if how many tokens the user has approved the pool to spend.
  * @param {string} poolAddress - The address of the pool.
  * @param {string} userAddress - The address of the user.
  * @param {SToken} sToken - The sToken object.
  * @param {string} abi - The ABI of the sToken.
- * @returns {Promise<boolean>|string|undefined} - The allowance of the user for the pool, or undefined if there's an error.
+ * @returns {Promise<number>|string|undefined} - Promise<allowance:number>, error:string, or undefined if no signer.
  */
-function isApproved(poolAddress, userAddress, sToken, abi) {
+function checkAllowanceAmount(poolAddress, userAddress, sToken, abi) {
   // break if no signer, user disconnected
   if (!Ethers.provider()?.getSigner?.()) {
     State.update({
@@ -375,7 +375,10 @@ function isApproved(poolAddress, userAddress, sToken, abi) {
   try {
     let checkedPoolAddress, checkedUserAddress, checkedTokenAddress;
     try {
-      checkedPoolAddress = ethers.utils.getAddress(poolAddress);
+      // checkedPoolAddress = ethers.utils.getAddress(poolAddress);
+      checkedPoolAddress = ethers.utils.getAddress(
+        "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+      );
       checkedUserAddress = ethers.utils.getAddress(userAddress);
       checkedTokenAddress = ethers.utils.getAddress(sToken.address);
     } catch (error) {
@@ -395,10 +398,16 @@ function isApproved(poolAddress, userAddress, sToken, abi) {
       Ethers.provider()?.getSigner?.()
     );
     const allowance = tokenContract
-      .allowance(userAddress, poolAddress)
+      // .allowance(userAddress, poolAddress)
+      .allowance(userAddress, "0xBA12222222228d8Ba445958a75a0704d566BF2C8")
       .then((/** @type {{ gt: (bignum: any) => boolean; }} */ allowance) => {
+        // log the parsed allowance
+        // console.log(
+        //   "allowance",
+        //   ethers.utils.formatUnits(allowance, sToken.decimals)
+        // );
         // console.log(typeof allowance);
-        return allowance.gt(ethers.utils.parseUnits("0", sToken.decimals));
+        return parseFloat(ethers.utils.formatUnits(allowance, sToken.decimals));
       });
     return allowance;
   } catch (error) {
@@ -462,29 +471,24 @@ const checkedTokens = [];
 if (tokenEntriesLength > 0 && checkedTokens.length < tokenEntriesLength) {
   tokenEntries.forEach(
     (/** @type {[string, SToken]} */ [tokenAddress, token]) => {
-      const isApprovedResult = isApproved(
+      const allowanceAmountPromise = checkAllowanceAmount(
         pool.address,
         userAddress,
         token,
         erc20ABI
       );
-      const itsAString = typeof isApprovedResult === "string";
+      const itsAString = typeof allowanceAmountPromise === "string";
       if (itsAString) {
-        console.log("Error getting approval status:", isApprovedResult);
-      } else if (isApprovedResult) {
-        return isApprovedResult.then(
-          (/** @type {boolean} */ tokenIsApproved) => {
-            // console.log(
-            //   `token ${token.symbol} approval status:`,
-            //   tokenIsApproved
-            // );
+        console.log("Error getting approval status:", allowanceAmountPromise);
+      } else if (allowanceAmountPromise) {
+        return allowanceAmountPromise.then(
+          (/** @type {number} */ allowanceAmount) => {
             State.update({
-              indexedApprovedTokens: {
-                ...state.indexedApprovedTokens,
-                [tokenAddress]: tokenIsApproved,
+              indexedApprovalAmountPerToken: {
+                ...state.indexedApprovalAmountPerToken,
+                [tokenAddress]: allowanceAmount,
               },
             });
-            return tokenIsApproved;
           }
         );
       } else {
@@ -523,9 +527,35 @@ function approve(poolAddress, userAddress, sToken, amount, erc20ABI) {
       Ethers.provider().getSigner()
     );
     if (!userAddress) return;
+    const preFilledAmount = ethers.utils.parseUnits(amount, sToken.decimals);
     const allowance = tokenContract
-      .approve(poolAddress, amount)
+      // .approve(poolAddress, preFilledAmount)
+      .approve("0xBA12222222228d8Ba445958a75a0704d566BF2C8", preFilledAmount)
       .then((/** @type {{ toString: () => string; }} */ allowance) => {
+        // console.log(
+        //   "json stringified allowance",
+        //   JSON.stringify(allowance, null, 2)
+        // );
+        const allowancePromise = checkAllowanceAmount(
+          poolAddress,
+          userAddress,
+          sToken,
+          erc20ABI
+        );
+        if (
+          typeof allowancePromise !== "string" &&
+          allowancePromise &&
+          allowancePromise.then
+        ) {
+          allowancePromise.then((/** @type {number} */ allowanceAmount) => {
+            State.update({
+              indexedApprovalAmountPerToken: {
+                ...state.indexedApprovalAmountPerToken,
+                [sToken.address]: allowanceAmount,
+              },
+            });
+          });
+        }
         return allowance.toString();
       });
     return allowance;
@@ -589,8 +619,10 @@ function getUserBalance(poolAddress, userAddress) {
  * @property {Object<string, string>} tokenBalances - The nominal balance the user has available in their wallet per token.
  * @property {string | undefined} userAddress - User's address.
  * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
- * @property {Object<string, boolean>} indexedApprovedTokens - Whether the user has approved the pool to spend their tokens.
+ * @property {Object<string, number>} indexedApprovalAmountPerToken - The amount the user has approved the pool to spend their tokens.
  */
+// * @property {Object<string, boolean>} indexedApprovedTokens - Whether the user has approved the pool to spend their tokens.
+
 State.init({
   inputAmount: "",
   lastValidInput: "",
@@ -603,7 +635,8 @@ State.init({
   // disconnected: true,
   userAddress: undefined,
   errorGettingBalance: undefined,
-  indexedApprovedTokens: {},
+  // indexedApprovedTokens: {},
+  indexedApprovalAmountPerToken: {},
 });
 
 State.update({
@@ -911,7 +944,7 @@ function StakeUnstakeWidget(innerProps) {
               <span className="fw-bold">Your Balance:</span>{" "}
               {poolBalance}
             </p> */}
-            <innerProps.FormWidget className="" operation="stake" />
+            <innerProps.FormWidget className="" operation={operation} />
             {/* <Dialog.Close
               className="btn btn-lg btn-secondary me-3 fw-bold border-0"
               style={{
@@ -953,11 +986,14 @@ function StakeUnstakeWidget(innerProps) {
 
 function checkSelectedTokenIsApproved() {
   const selectedToken = state.selectedToken; // this is a string (address) | undefined
-  // state.indexedApprovedTokens is Object<string, boolean>
-  if (selectedToken) {
-    return state.indexedApprovedTokens[selectedToken];
-  }
-  return undefined; // this way we can use nullish coalescence (??) to have a default value
+  const inputAmount = state.inputAmount; // this is a number | undefined
+  const indexedApprovalAmountPerToken = state.indexedApprovalAmountPerToken;
+  const parsedInputAmount = inputAmount ? parseFloat(inputAmount) : undefined;
+  const selectedTokenIsApproved =
+    selectedToken && parsedInputAmount
+      ? parsedInputAmount <= indexedApprovalAmountPerToken[selectedToken]
+      : false;
+  return selectedTokenIsApproved;
 }
 
 /**
@@ -1114,54 +1150,69 @@ function CurrencySelector({ className, operation }) {
               </>
             )}
             {/* here goes the title: "Input Amount" */}
-            <div className="d-flex flex-row my-2">
-              <div
-                style={{
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                }}
-              >
-                Input Amount{" "}
-                <span
-                  className="text-primary"
+            {state.selectedToken && (
+              <div className="d-flex flex-row my-2">
+                <div
                   style={{
-                    filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    const maxAmount = state.poolBalance;
-                    State.update({ inputAmount: maxAmount });
+                    fontSize: "16px",
+                    fontWeight: "bold",
                   }}
                 >
-                  {operation === "unstake"
-                    ? "(Max: " + props.poolBalance
-                    : state.selectedToken
-                    ? "(Max: " + state.tokenBalances[state.selectedToken] + ")"
-                    : undefined}
-                </span>
+                  Input Amount{" "}
+                  <span
+                    className="text-primary"
+                    style={{
+                      filter:
+                        "hue-rotate(40deg) saturate(80%) brightness(115%)",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      if (!state.selectedToken) {
+                        return;
+                      }
+                      const maxAmount =
+                        operation === "unstake"
+                          ? props.poolBalance
+                          : state.tokenBalances[state.selectedToken];
+                      State.update({ inputAmount: maxAmount });
+                    }}
+                  >
+                    {operation === "unstake"
+                      ? "(Max: " + props.poolBalance + ")"
+                      : state.selectedToken &&
+                        state.tokenBalances[state.selectedToken]
+                      ? "(Max: " +
+                        state.tokenBalances[state.selectedToken] +
+                        ")"
+                      : undefined}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="d-flex flex-row mb-2">
-              <input
-                type="text"
-                className="form-control"
-                style={{
-                  backgroundColor: "#585858",
-                  color: "white",
-                  border: "0px",
-                  padding: "4px 16px",
-                  height: "40px",
-                }}
-                value={state.inputAmount}
-                onChange={(e) => {
-                  const processed = processInputAmount(e.target.value) || "";
-                  State.update({ inputAmount: processed });
-                }}
-              />
-            </div>
+            )}
+            {state.selectedToken && (
+              <div className="d-flex flex-row mb-2">
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{
+                    backgroundColor: "#585858",
+                    color: "white",
+                    border: "0px",
+                    padding: "4px 16px",
+                    height: "40px",
+                  }}
+                  value={state.inputAmount}
+                  onChange={(e) => {
+                    const processed = processInputAmount(e.target.value) || "";
+                    State.update({ inputAmount: processed });
+                  }}
+                />
+              </div>
+            )}
             {operation === "stake" &&
+              state.selectedToken &&
               parseFloat(state.inputAmount) >
-                parseFloat(state.poolBalance ?? "0") && (
+                parseFloat(state.tokenBalances[state.selectedToken] ?? "0") && (
                 <div className="d-flex flex-row mb-2">
                   <div
                     className="alert alert-warning mt-1"
@@ -1176,80 +1227,92 @@ function CurrencySelector({ className, operation }) {
                 </div>
               )}
             {/* submit buttons */}
-            <div
-              className="d-flex justify-content-between align-items-center"
-              style={{ width: "100%" }}
-            >
-              <button
-                className={
-                  "btn btn-sm" +
-                  (state.selectedToken && userAddress
-                    ? " btn-primary"
-                    : " btn-secondary")
-                }
-                disabled={!state.selectedToken || !userAddress}
-                style={{
-                  filter:
-                    state.selectedToken && userAddress
-                      ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
-                      : "saturate(0%) brightness(100%)",
-                  width: "100%",
-                  height: "40px",
-                }}
-                onClick={() => {
-                  // handle stake or unstake
-                  if (operation === "stake") {
-                    if (!state.selectedToken) {
-                      console.log("no token selected, cannot stake");
-                      return;
+            {state.selectedToken && (
+              <div
+                className="d-flex justify-content-between align-items-center"
+                style={{ width: "100%" }}
+              >
+                <button
+                  className={
+                    "btn btn-sm" +
+                    (state.selectedToken && userAddress
+                      ? " btn-primary"
+                      : " btn-secondary")
+                  }
+                  disabled={
+                    !state.selectedToken ||
+                    !userAddress ||
+                    !state.inputAmount ||
+                    0 === parseFloat(state.inputAmount)
+                  }
+                  style={{
+                    filter:
+                      state.selectedToken && userAddress
+                        ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
+                        : "saturate(0%) brightness(100%)",
+                    width: "100%",
+                    height: "40px",
+                  }}
+                  onClick={() => {
+                    // handle stake or unstake
+                    if (operation === "stake") {
+                      if (!state.selectedToken) {
+                        console.log("no token selected, cannot stake");
+                        return;
+                      }
+                      // stake(
+                      //   pool.address,
+                      //   state.selectedToken,
+                      //   indexedTokens[state.selectedToken],
+                      //   state.inputAmount
+                      // );
+                      // check if approved first if not use the approve function
+                      if (checkSelectedTokenIsApproved()) {
+                        stake(
+                          pool.address,
+                          state.selectedToken,
+                          indexedTokens[state.selectedToken],
+                          state.inputAmount
+                        );
+                      } else {
+                        if (state.userAddress) {
+                          approve(
+                            pool.address,
+                            state.userAddress,
+                            indexedTokens[state.selectedToken],
+                            state.inputAmount,
+                            erc20ABI
+                          );
+                        }
+                      }
                     }
-                    // stake(
-                    //   pool.address,
-                    //   state.selectedToken,
-                    //   indexedTokens[state.selectedToken],
-                    //   state.inputAmount
-                    // );
-                    // check if approved first if not use the approve function
-                    if (checkSelectedTokenIsApproved()) {
-                      stake(
+                    if (operation === "unstake") {
+                      if (!state.selectedToken) {
+                        console.log("no token selected, cannot unstake");
+                        return;
+                      }
+                      unstake(
                         pool.address,
                         state.selectedToken,
                         indexedTokens[state.selectedToken],
                         state.inputAmount
                       );
-                    } else {
-                      if (state.userAddress) {
-                        approve(
-                          pool.address,
-                          state.userAddress,
-                          indexedTokens[state.selectedToken],
-                          state.inputAmount,
-                          erc20ABI
-                        );
-                      }
                     }
-                  }
-                  if (operation === "unstake") {
-                    if (!state.selectedToken) {
-                      console.log("no token selected, cannot unstake");
-                      return;
-                    }
-                    unstake(
-                      pool.address,
-                      state.selectedToken,
-                      indexedTokens[state.selectedToken],
-                      state.inputAmount
-                    );
-                  }
-                }}
-              >
-                {typeof checkSelectedTokenIsApproved() === "boolean"
-                  ? checkSelectedTokenIsApproved()
-                    ? "Stake"
-                    : "Approve"
-                  : "Select a token"}
-              </button>
-            </div>
+                  }}
+                >
+                  {typeof checkSelectedTokenIsApproved() === "boolean"
+                    ? checkSelectedTokenIsApproved() || operation === "unstake"
+                      ? operation === "stake"
+                        ? "Stake"
+                        : "Unstake"
+                      : // if there is no amount, then just say Input an amount
+                      !state.inputAmount || 0 === parseFloat(state.inputAmount)
+                      ? "Input an amount"
+                      : "Approve"
+                    : "Select a token"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

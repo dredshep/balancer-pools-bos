@@ -4,6 +4,6 @@
 
 Go to https://near.org/sandbox
 
-Paste latest UI or whatever you want, currently this: [utils/interface/MoreFilledUI.jsx](utils/interface/MoreFilledUI%20copy.jsx)
+Paste latest UI or whatever you want.
 
 Click `Preview`

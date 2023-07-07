@@ -23,6 +23,8 @@ const grahQlUris = {
   goerli:
     "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-goerli-v2",
   mainnet: "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-v2",
+  sepolia:
+    "https://api.studio.thegraph.com/query/24660/balancer-sepolia-v2/version/latest",
 };
 
 /**

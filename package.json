@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "@radix-ui/react-dropdown-menu": "^2.0.5"
+    "@radix-ui/react-dropdown-menu": "^2.0.5",
+    "ethers": "^6.6.2"
   },
   "name": "balancer-bos",
   "version": "1.0.0",

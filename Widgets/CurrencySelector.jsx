@@ -375,6 +375,10 @@ function joinOrExitPool(joinExitFunctionArgs) {
             "joinOrExitPool() transaction mined TX.wait.then: receipt:",
             receipt
           );
+          // refresh balances
+
+          fetchAndUpdateBalance(state, getUserBalance, pool, userAddress, true);
+          initializeTokenBalances(state, getUserBalance, true);
         })
         ?.catch?.((e) => {
           console.log(
@@ -836,35 +840,55 @@ State.init({
 // });
 
 // for each token in the pool, find its balance and update state.tokenBalances["tokenAddress"] = balance
-const tokenCount = state.form.tokenAddresses.length;
-let tokenCountDone = 0;
+let isTokenBalanceInitialized = false;
 
-for (let i = 0; i < tokenCount; i++) {
-  const tokenAddress = state.form.tokenAddresses[i];
-  const userAddress = state.userAddress;
-  if (!userAddress) continue;
-  const balance = getUserBalance(tokenAddress, userAddress);
-  if (!balance || typeof balance === "string") {
-    State.update({
-      errorGettingBalance: balance,
-    });
-    continue;
+/**
+ * Initializes the token balances for the current user.
+ * @param {Object} state - The current state object.
+ * @param {Function} getUserBalance - The function to get the user balance.
+ * @param {Boolean} force - Whether to force the initialization process regardless of the initialized state.
+ * @returns {Promise<void>} - A promise that resolves when the token balances have been initialized.
+ */
+async function initializeTokenBalances(state, getUserBalance, force) {
+  if (isTokenBalanceInitialized && !force) {
+    return;
   }
-  balance.then((/** @type {string} */ balance) => {
-    State.update({
-      tokenBalances: {
-        ...state.tokenBalances,
-        [tokenAddress]: balance,
-      },
-    });
-    tokenCountDone++;
-    if (tokenCountDone === tokenCount) {
+  isTokenBalanceInitialized = true;
+
+  const tokenCount = state.form.tokenAddresses.length;
+  let tokenCountDone = 0;
+
+  for (let i = 0; i < tokenCount; i++) {
+    const tokenAddress = state.form.tokenAddresses[i];
+    const userAddress = state.userAddress;
+    if (!userAddress) continue;
+    const balance = getUserBalance(tokenAddress, userAddress);
+    if (!balance || typeof balance === "string") {
       State.update({
-        errorGettingBalance: undefined,
+        errorGettingBalance: balance,
       });
+      continue;
     }
-  });
+    balance.then((/** @type {string} */ balance) => {
+      State.update({
+        tokenBalances: {
+          ...state.tokenBalances,
+          [tokenAddress]: balance,
+        },
+      });
+      tokenCountDone++;
+      if (tokenCountDone === tokenCount) {
+        State.update({
+          errorGettingBalance: undefined,
+        });
+      }
+    });
+  }
 }
+
+// Call the function to initialize the token balances by default
+initializeTokenBalances(state, getUserBalance, false);
+
 /**
  * @param {string} inputAmount
  */
@@ -1123,15 +1147,40 @@ function checkSelectedTokenIsApproved() {
   return selectedTokenIsApproved;
 }
 
-if (typeof state.poolBalance === "undefined") {
+/**
+ * Fetches and updates the user balance.
+ * @param {Object} state - The current state object.
+ * @param {Function} getUserBalance - The function to get the user balance.
+ * @param {Object} pool - The pool object.
+ * @param {string} userAddress - The user's address.
+ * @param {Boolean} force - Whether to force the fetching of balance regardless of the current balance state.
+ * @returns {Promise<void>} - A promise that resolves when the balance has been fetched and updated.
+ */
+async function fetchAndUpdateBalance(
+  state,
+  getUserBalance,
+  pool,
+  userAddress,
+  force
+) {
+  if (typeof state.poolBalance !== "undefined" && !force) {
+    return;
+  }
+
   const promise = getUserBalance(pool.address, userAddress);
   if (promise !== undefined && typeof promise !== "string") {
-    promise?.then((_balance) => {
+    promise.then((_balance) => {
       // balance is a float string, parse it with tokenDecimals=18
       const balance = ethers.utils.parseUnits(_balance, 18);
       State.update({ poolBalance: ethers.utils.formatUnits(balance, 18) });
     });
   }
+}
+
+// Call the function to fetch and update the balance by default
+fetchAndUpdateBalance(state, getUserBalance, pool, userAddress, false);
+
+if (typeof state.poolBalance === "undefined") {
   // @ts-ignore
   return <div>Loading...</div>;
 }

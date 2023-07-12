@@ -71,6 +71,25 @@ const ZERO = ethers.BigNumber.from(0);
 const encode = (types, values) =>
   ethers.utils.defaultAbiCoder.encode(types, values);
 
+function processArgs(/** @type {JoinPoolArgs} */ args) {
+  const unsortedTokenAddresses = args.sortedTokenAddresses;
+  const sortedTokenAddresses = args.sortedTokenAddresses.sort();
+  const matchingSortAmounts = unsortedTokenAddresses.map((tokenAddress) => {
+    const index = sortedTokenAddresses.indexOf(tokenAddress);
+    return args.maxAmountsIn[index];
+  });
+  const maxAmountsIn = args.maxAmountsIn.map((amount) =>
+    ethers.BigNumber.from(amount)
+  );
+  const userData = encode(["uint256", "uint256[]"], [ZERO, maxAmountsIn]);
+  return {
+    ...args,
+    sortedTokenAddresses,
+    maxAmountsIn,
+    userData,
+  };
+}
+
 /** @type {JoinPoolArgs} */
 const args = {
   poolId: "0x1002b479766d0f7977ab06473e03f0cd5ee3c54b000200000000000000000014",

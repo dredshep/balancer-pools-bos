@@ -230,7 +230,7 @@ const userDataEncoded = ethers.utils.defaultAbiCoder.encode(types, data);
  * @param {Object} contract - The Balancer contract instance.
  * @returns {Promise<Object>} - The transaction receipt.
  */
-async function joinPool(poolId, sender, recipient, joinAmount, contract) {
+async function exitPool(poolId, sender, recipient, joinAmount, contract) {
   const request = {
     assets: [
       /* array of token addresses involved in the transaction */

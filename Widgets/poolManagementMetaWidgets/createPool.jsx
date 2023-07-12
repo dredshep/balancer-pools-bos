@@ -138,8 +138,8 @@ const createPool = async () => {
     ]; // 90:10 ratio
     const swapFee = ethers.utils.parseEther("0.1");
     const owner = "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57"; // The owner address
-    const name = "Dredshep Test Pool"; // The name of the pool
-    const symbol = "Weighted-Shep"; // The symbol of the pool
+    const name = "Dred Test Pool - No Provider"; // The name of the pool
+    const symbol = "weighted-no-prov"; // The symbol of the pool
     const salt = ethers.utils.hexZeroPad("0x1", 32); // Adjust accordingly
 
     const provider = Ethers.provider();
@@ -155,7 +155,10 @@ const createPool = async () => {
     // const rateProviders = new Array(tokens.length).fill(
     //   "0x0000000000000000000000000000000000000000"
     // ); // Array of zeroes
-    const rateProviders = tokens;
+    const rateProviders = [
+      "0x0000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000",
+    ];
     console.log("rateProviders:", rateProviders);
     const gasLimit = 6000000; // Adjust accordingly
     // Create the pool

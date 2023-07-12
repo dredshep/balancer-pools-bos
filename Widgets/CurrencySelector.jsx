@@ -144,7 +144,7 @@ props.unstake = async (poolAddress, userAddress, sToken, abi) => (
  * @param {Object} contract - The Balancer contract instance.
  * @returns {Promise<Object>} - The transaction receipt.
  */
-async function exitPool(poolId, sender, recipient, joinAmount, contract) {
+async function joinPool(poolId, sender, recipient, joinAmount, contract) {
   const request = {
     assets: [
       /* array of token addresses involved in the transaction */
@@ -484,19 +484,6 @@ function queryExit(poolId, sender, recipient, rawRequest) {
         "queryExit",
         result
       );
-      // console.log("eth_calledPromise decoded:", decoded);
-      // console.log("bptIn:", decoded[0]);
-      // // this is a bignumber, log it as a string
-      // console.log("bptInString:", decoded[0].toString());
-      // console.log("amountsOut:", decoded[1]); // arr of bignum
-      // console.log(
-      //   "amountsOutString:",
-      //   decoded[1]
-      //     .map((/** @type {{ toString: () => string; }} */ x) => x.toString())
-      //     .join(", ")
-      // ); // arr of strings
-      // now that i think about it, let's return the processed amountsi in bignumber
-
       /**@type {{bptIn: object, amountsOut: object[]}} */
       const queryResult = {
         bptIn: decoded[0],
@@ -570,14 +557,14 @@ function queryThenExit(poolId, sender, recipient, rawRequest) {
     return joinOrExitPool({
       exitArgs: {
         ...rawRequest,
-        minAmountsOut: res.amountsOut,
+        minAmountsOut: res.amountsOut.map((x) => x.mul(99).div(100)),
         userData: encode(
           ["uint256", "uint256[]", "uint256"],
           [
             2,
             res.amountsOut,
             // multiply res.bptIn by 1.01 to account for slippage
-            res.bptIn.mul(101).div(100),
+            res.bptIn,
           ]
         ),
       },
@@ -1638,12 +1625,18 @@ function CurrencySelector({ className, operation }) {
                       // get sorted token amounts by mapping token amounts to tokenAddresses indexes
                       const amountsOut = sortedTokenAddresses.map(
                         (tokenAddress, i) => {
-                          return (
-                            state.customWithdrawableAmounts?.[i] ??
-                            ethers.utils.parseUnits("0", 18)
-                          );
+                          return state.customWithdrawableAmounts?.[i];
                         }
                       );
+                      amountsOut.forEach((amount, i) => {
+                        if (amount === undefined) {
+                          throw new Error(
+                            "amountsOut[" +
+                              i +
+                              "] is undefined, this should not happen"
+                          );
+                        }
+                      });
                       const bigNumberInputAmount = ethers.utils.parseUnits(
                         state.inputAmount,
                         18

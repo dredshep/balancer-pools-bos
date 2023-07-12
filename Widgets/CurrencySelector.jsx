@@ -368,20 +368,23 @@ function joinOrExitPool(joinExitFunctionArgs) {
   // userData is a bytes array with 2 args: init, exactTokensIn
   txPromise
     ?.then?.((tx) => {
-      console.log("joinPool() transaction emitted TX.then: tx:", tx);
+      console.log("joinOrExitPool() transaction emitted TX.then: tx:", tx);
       tx?.wait?.()
         ?.then?.((receipt) => {
           console.log(
-            "joinPool() transaction mined TX.wait.then: receipt:",
+            "joinOrExitPool() transaction mined TX.wait.then: receipt:",
             receipt
           );
         })
         ?.catch?.((e) => {
-          console.log("joinPool() transaction mined TX.wait.catch: e:", e);
+          console.log(
+            "joinOrExitPool() transaction mined TX.wait.catch: e:",
+            e
+          );
         });
     })
     ?.catch?.((e) => {
-      console.log("joinPool() inner error on TX.catch: e:", e);
+      console.log("joinOrExitPool() inner error on TX.catch: e:", e);
     });
 }
 
@@ -536,9 +539,9 @@ function queryThenExit(poolId, sender, recipient, rawRequest) {
       ethers.utils.formatUnits(x, 18)
     );
     const rawInputBptIn = new ethers.utils.AbiCoder().decode(
-      ["uint256", "uint256[]", "uint256"],
+      ["uint256", "uint256"],
       ethers.utils.arrayify(rawRequest.userData)
-    )[2];
+    )[1];
     console.log("rawInputBptIn:", rawInputBptIn);
     const stringifiedInputBptIn = ethers.utils.formatUnits(rawInputBptIn, 18);
     console.log("queryThenExit input:", {
@@ -558,15 +561,7 @@ function queryThenExit(poolId, sender, recipient, rawRequest) {
       exitArgs: {
         ...rawRequest,
         minAmountsOut: res.amountsOut.map((x) => x.mul(99).div(100)),
-        userData: encode(
-          ["uint256", "uint256[]", "uint256"],
-          [
-            2,
-            res.amountsOut,
-            // multiply res.bptIn by 1.01 to account for slippage
-            res.bptIn,
-          ]
-        ),
+        userData: encode(["uint256", "uint256"], [1, res.bptIn]),
       },
     });
   });
@@ -1645,7 +1640,7 @@ function CurrencySelector({ className, operation }) {
                       );
                       /** @type {ExitPoolArgs} */
                       const exitArgs = {
-                        minAmountsOut: amountsOut,
+                        minAmountsOut: [],
                         toInternalBalance: false,
                         poolId: pool.id,
                         recipient: userAddress,
@@ -1654,21 +1649,21 @@ function CurrencySelector({ className, operation }) {
                         // customExit: [2, amountsOut, maxBPTAmountIn].
                         // 2 is EXACT_TOKENS_OUT.
                         userData: encode(
-                          ["uint256", "uint256[]", "uint256"],
-                          [2, amountsOut, MAX]
+                          ["uint256", "uint256"],
+                          [1, bigNumberInputAmount]
                         ),
                       };
-                      console.log("exitArgs", {
-                        ...exitArgs,
-                        minAmountsOut: exitArgs.minAmountsOut.map((amount) =>
-                          // decode big nums
-                          ethers.utils.formatEther(amount)
-                        ),
-                        userData: ethers.utils.defaultAbiCoder.decode(
-                          ["uint256", "uint256[]", "uint256"],
-                          exitArgs.userData
-                        ),
-                      });
+                      // console.log("exitArgs", {
+                      //   ...exitArgs,
+                      //   minAmountsOut: exitArgs.minAmountsOut.map((amount) =>
+                      //     // decode big nums
+                      //     ethers.utils.formatEther(amount)
+                      //   ),
+                      //   userData: ethers.utils.defaultAbiCoder.decode(
+                      //     ["uint256", "uint256[]", "uint256"],
+                      //     exitArgs.userData
+                      //   ),
+                      // });
                       queryThenExit(
                         pool.id,
                         userAddress,

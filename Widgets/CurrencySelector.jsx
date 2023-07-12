@@ -719,7 +719,9 @@ function approve(poolAddress, userAddress, sToken, amount, erc20ABI) {
     const preFilledAmount = ethers.utils.parseUnits(amount, sToken.decimals);
     const allowance = tokenContract
       // .approve(poolAddress, preFilledAmount)
-      .approve("0xBA12222222228d8Ba445958a75a0704d566BF2C8", preFilledAmount)
+      .approve("0xBA12222222228d8Ba445958a75a0704d566BF2C8", preFilledAmount, {
+        gasLimit: 6000000,
+      })
       .then((/** @type {{ toString: () => string; }} */ allowance) => {
         // console.log(
         //   "json stringified allowance",

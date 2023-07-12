@@ -477,7 +477,6 @@ const ZERO = ethers.BigNumber.from(0);
 const MAX = ethers.BigNumber.from(
   "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 );
-console.log("MAXi:", MAX);
 
 /**
  * Encodes a value array into bytes according to the provided types using the defaultAbiCoder of ethers.
@@ -656,8 +655,8 @@ const exitArgs = {
  * @param {ExitPoolArgs} rawRequest - The request object containing the minimum amounts of tokens to receive upon exiting the pool.
  */
 function queryThenExit(poolId, sender, recipient, rawRequest) {
-  queryExit(poolId, sender, recipient, rawRequest).then((res) =>
-    joinOrExitPool({
+  queryExit(poolId, sender, recipient, rawRequest).then((res) => {
+    return joinOrExitPool({
       exitArgs: {
         ...rawRequest,
         minAmountsOut: res.amountsOut,
@@ -671,8 +670,8 @@ function queryThenExit(poolId, sender, recipient, rawRequest) {
           ]
         ),
       },
-    })
-  );
+    });
+  });
 }
 
 /******************************************************
@@ -1682,7 +1681,7 @@ function CurrencySelector({ className, operation }) {
                           // 2 is EXACT_TOKENS_OUT.
                           userData: encode(
                             ["uint256", "uint256[]", "uint256"],
-                            [2, amountsOut, 0]
+                            [2, amountsOut, MAX]
                           ),
                         };
                         queryThenExit(

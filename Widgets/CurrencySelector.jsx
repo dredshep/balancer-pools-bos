@@ -1362,7 +1362,7 @@ function updateWithdrawableAmounts(init) {
       state.inputAmount &&
       state.inputAmount !== "" &&
       state.inputAmount !== "0" &&
-      state.inputAmount.split(".")[1]?.length <= 18
+      (state.inputAmount.split(".")[1]?.length ?? 0) <= 18
         ? ethers.utils.parseUnits(state.inputAmount, 18)
         : undefined;
     if (bptAmount === undefined)
@@ -1428,6 +1428,8 @@ function CurrencySelector({ className, operation }) {
   const { oneForms, tokenAddresses } = currencySelectorGroup;
   /** @type {number[]} */
   const arrayOfSameLengthAsTokenAddresses = [...Array(tokenAddresses.length)];
+  const displayInput =
+    (operation === "stake" && state.selectedToken) || operation === "unstake";
 
   return (
     <div className={className}>
@@ -1437,7 +1439,7 @@ function CurrencySelector({ className, operation }) {
         ) : (
           <div className="d-flex flex-column">
             {/* here goes the title: "Input Amount" */}
-            {operation === "stake" ? (
+            {operation === "stake" && (
               <>
                 <div className="d-flex flex-row my-2">
                   <div
@@ -1574,7 +1576,8 @@ function CurrencySelector({ className, operation }) {
                   </DropdownMenu.Root>
                 </div>
               </>
-            ) : (
+            )}
+            {operation === "unstake" && (
               <>
                 {/* show a list of tokens with : at the end and show the Y amount of tokens to be withdrawn if the inputAmount is X when pressing Unstake */}
                 <div className="d-flex flex-row my-2">
@@ -1642,7 +1645,7 @@ function CurrencySelector({ className, operation }) {
                   </ol>
                 </div>
                 {/* input */}
-                <div className="d-flex flex-row my-2">
+                {/* <div className="d-flex flex-row my-2">
                   <div
                     style={{
                       fontSize: "16px",
@@ -1685,11 +1688,11 @@ function CurrencySelector({ className, operation }) {
                       }}
                     />
                   </div>
-                </div>
+                </div> */}
               </>
             )}
             {/* here goes the title: "Input Amount" */}
-            {state.selectedToken && (
+            {displayInput && (
               <div className="d-flex flex-row my-2">
                 <div
                   style={{
@@ -1706,14 +1709,22 @@ function CurrencySelector({ className, operation }) {
                       cursor: "pointer",
                     }}
                     onClick={() => {
-                      if (!state.selectedToken) {
+                      if (!state.selectedToken && operation === "stake") {
+                        return;
+                      } else if (state.selectedToken && operation === "stake") {
+                        const maxStakeAmount =
+                          state.tokenBalances[state.selectedToken];
+                        State.update({
+                          inputAmount: processInputAmount(maxStakeAmount),
+                        });
                         return;
                       }
-                      const maxAmount =
-                        operation === "unstake"
-                          ? state.poolBalance
-                          : state.tokenBalances[state.selectedToken];
-                      State.update({ inputAmount: maxAmount });
+
+                      const maxAmount = state.poolBalance;
+                      State.update({
+                        inputAmount: processInputAmount(maxAmount || "0"),
+                      });
+                      updateWithdrawableAmounts(false);
                     }}
                   >
                     {operation === "unstake"
@@ -1728,7 +1739,7 @@ function CurrencySelector({ className, operation }) {
                 </div>
               </div>
             )}
-            {state.selectedToken && (
+            {displayInput && (
               <div className="d-flex flex-row mb-2">
                 <input
                   type="text"
@@ -1744,6 +1755,7 @@ function CurrencySelector({ className, operation }) {
                   onChange={(e) => {
                     const processed = processInputAmount(e.target.value) || "";
                     State.update({ inputAmount: processed });
+                    updateWithdrawableAmounts(false);
                   }}
                 />
               </div>

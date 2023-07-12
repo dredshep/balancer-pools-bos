@@ -656,6 +656,36 @@ const exitArgs = {
  */
 function queryThenExit(poolId, sender, recipient, rawRequest) {
   queryExit(poolId, sender, recipient, rawRequest).then((res) => {
+    const stringifiedAmountsOut = res.amountsOut.map((x) =>
+      ethers.utils.formatUnits(x, 18)
+    );
+    const stringifiedBptIn = ethers.utils.formatUnits(res.bptIn, 18);
+    console.log("queryThenExit res:", {
+      bptIn: stringifiedBptIn,
+      amountsOut: stringifiedAmountsOut,
+    });
+    const stringifiedInputAmountsOut = rawRequest.minAmountsOut.map((x) =>
+      ethers.utils.formatUnits(x, 18)
+    );
+    const rawInputBptIn = new ethers.utils.AbiCoder().decode(
+      ["uint256", "uint256[]", "uint256"],
+      ethers.utils.arrayify(rawRequest.userData)
+    )[2];
+    console.log("rawInputBptIn:", rawInputBptIn);
+    const stringifiedInputBptIn = ethers.utils.formatUnits(rawInputBptIn, 18);
+    console.log("queryThenExit input:", {
+      bptIn: stringifiedInputBptIn,
+      amountsOut: stringifiedInputAmountsOut,
+    });
+    // make a markdown table with the input and output amounts in parsed mode
+    const table = `
+| Name | Input | Output |
+| ---- | ----- | ------ |
+| maxBptIn | ${stringifiedInputBptIn} | ${stringifiedBptIn} |
+| Max Amount 1 | ${stringifiedInputAmountsOut?.[0]} | ${stringifiedAmountsOut?.[0]} |
+| Max Amount 2 | ${stringifiedInputAmountsOut?.[1]} | ${stringifiedAmountsOut?.[1]} |
+`;
+    console.log(table);
     return joinOrExitPool({
       exitArgs: {
         ...rawRequest,
@@ -1778,7 +1808,7 @@ function CurrencySelector({ className, operation }) {
                 </div>
               )}
             {/* submit buttons */}
-            {state.selectedToken && (
+            {(state.selectedToken || operation === "unstake") && (
               <div
                 className="d-flex justify-content-between align-items-center"
                 style={{ width: "100%" }}
@@ -1786,19 +1816,21 @@ function CurrencySelector({ className, operation }) {
                 <button
                   className={
                     "btn btn-sm" +
-                    (state.selectedToken && userAddress
+                    ((state.selectedToken || operation === "unstake") &&
+                    userAddress
                       ? " btn-primary"
                       : " btn-secondary")
                   }
                   disabled={
-                    !state.selectedToken ||
-                    !userAddress ||
+                    (operation === "stake" &&
+                      (!state.selectedToken || !userAddress)) ||
                     !state.inputAmount ||
                     0 === parseFloat(state.inputAmount)
                   }
                   style={{
                     filter:
-                      state.selectedToken && userAddress
+                      (state.selectedToken || operation === "unstake") &&
+                      userAddress
                         ? "hue-rotate(40deg) saturate(80%) brightness(115%)"
                         : "saturate(0%) brightness(100%)",
                     width: "100%",
@@ -1868,54 +1900,78 @@ function CurrencySelector({ className, operation }) {
                       }
                     }
                     if (operation === "unstake") {
-                      if (!state.selectedToken) {
-                        console.log("no token selected, cannot unstake");
-                        return;
-                      }
+                      // if (!state.selectedToken) {
+                      //   console.log("no token selected, cannot unstake");
+                      //   return;
+                      // }
                       // same as above but with exitArgs
-                      if (checkSelectedTokenIsApproved()) {
-                        const sortedTokenAddresses = [...tokenAddresses].sort();
-                        // get sorted token amounts by mapping token amounts to tokenAddresses indexes
-                        const amountsOut = sortedTokenAddresses.map(
-                          (tokenAddress) => {
-                            const tokenAmount = state.inputAmount;
-                            const tokenDecimals =
-                              indexedTokens[tokenAddress].decimals;
-                            if (tokenAddress === state.selectedToken) {
-                              return ethers.utils.parseEther(
-                                tokenAmount,
-                                tokenDecimals
-                              );
-                            } else {
-                              return ethers.utils.parseEther(
-                                "0",
-                                tokenDecimals
-                              );
-                            }
-                          }
-                        );
-                        /** @type {ExitPoolArgs} */
-                        const exitArgs = {
-                          minAmountsOut: amountsOut,
-                          toInternalBalance: false,
-                          poolId: pool.id,
-                          recipient: userAddress,
-                          sender: userAddress,
-                          sortedTokenAddresses: sortedTokenAddresses,
-                          // customExit: [2, amountsOut, maxBPTAmountIn].
-                          // 2 is EXACT_TOKENS_OUT.
-                          userData: encode(
-                            ["uint256", "uint256[]", "uint256"],
-                            [2, amountsOut, MAX]
-                          ),
-                        };
-                        queryThenExit(
-                          pool.id,
-                          userAddress,
-                          userAddress,
-                          exitArgs
-                        );
-                      }
+                      // if (checkSelectedTokenIsApproved()) {
+                      const sortedTokenAddresses = [...tokenAddresses].sort();
+                      // get sorted token amounts by mapping token amounts to tokenAddresses indexes
+                      const amountsOut = sortedTokenAddresses.map(
+                        (tokenAddress, i) => {
+                          // const tokenAmount =
+                          //   state.customWithdrawableAmounts?.[i] ?? "0";
+                          // const tokenDecimals =
+                          //   indexedTokens[tokenAddress].decimals;
+                          // // if (tokenAddress === state.selectedToken) {
+                          // return ethers.utils.parseUnits(
+                          //   tokenAmount,
+                          //   tokenDecimals
+                          // );
+                          return (
+                            state.customWithdrawableAmounts?.[i] ??
+                            ethers.utils.parseUnits("0", 18)
+                          );
+                          // } else {
+                          //   return ethers.utils.parseEther(
+                          //     "0",
+                          //     tokenDecimals
+                          //   );
+                          // }
+                        }
+                      );
+                      const bigNumberInputAmount = ethers.utils.parseUnits(
+                        state.inputAmount,
+                        18
+                      );
+                      /** @type {ExitPoolArgs} */
+                      const exitArgs = {
+                        minAmountsOut: amountsOut,
+                        toInternalBalance: false,
+                        poolId: pool.id,
+                        recipient: userAddress,
+                        sender: userAddress,
+                        sortedTokenAddresses: sortedTokenAddresses,
+                        // customExit: [2, amountsOut, maxBPTAmountIn].
+                        // 2 is EXACT_TOKENS_OUT.
+                        userData: encode(
+                          ["uint256", "uint256[]", "uint256"],
+                          [2, amountsOut, MAX]
+                        ),
+                      };
+                      console.log("exitArgs", {
+                        ...exitArgs,
+                        minAmountsOut: exitArgs.minAmountsOut.map((amount) =>
+                          // decode big nums
+                          ethers.utils.formatEther(amount)
+                        ),
+                        userData: ethers.utils.defaultAbiCoder.decode(
+                          ["uint256", "uint256[]", "uint256"],
+                          exitArgs.userData
+                        ),
+                      });
+                      queryThenExit(
+                        pool.id,
+                        userAddress,
+                        userAddress,
+                        exitArgs
+                      );
+                      // } else {
+                      //   console.log(
+                      //     "not approved, go to stake and approve the tokens first"
+                      //   );
+                      // }
                     }
                   }}
                 >

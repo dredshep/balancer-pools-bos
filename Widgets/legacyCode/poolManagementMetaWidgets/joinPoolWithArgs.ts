@@ -15,7 +15,10 @@ interface JoinPoolArgs {
 
 ethers.constants.MaxUint256;
 ethers.utils.formatBytes32String;
-
+const sepoliaVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
+const vaultAbi = [
+  "function joinPool(address,uint256,address,address,tuple[],bool)",
+];
 function joinPool(props: JoinPoolArgs) {
   const vault = new ethers.Contract(
     sepoliaVaultAddress,

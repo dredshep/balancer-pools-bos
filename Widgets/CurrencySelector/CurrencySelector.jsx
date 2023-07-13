@@ -60,9 +60,8 @@
  * @typedef {Object} Props
  * @property {"stake"|"unstake"} operation
  * @property {TransformedPool} pool
- * @property {string} erc20ABI
- * @property {boolean} test
- * @property {string} className
+ * @property {string} vaultAddress
+ * @property {string} balancerQueriesAddress
  */
 
 const missingProps = [];

@@ -1,28 +1,6 @@
-// @ts-check
-
-/** @typedef {Object} SBalancer @property {string} id @property {number} poolCount @property {string} totalLiquidity */
-/** @typedef {Object} SToken @property {string} name @property {string} symbol @property {string} address @property {number} decimals @property {string} totalBalanceUSD @property {string} totalBalanceNotional @property {string} totalVolumeUSD @property {string} totalVolumeNotional @property {string | null} latestUSDPrice @property {SLatestPrice | null} latestPrice */
-/** @typedef {Object} SLatestPrice @property {string} pricingAsset @property {string} price @property {SPoolId} poolId */
-/** @typedef {Object} SPoolId @property {string} totalWeight */
-/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
-/** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
-/** @typedef {Object} TokenWeights @property {string} address @property {string} weight */
-/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
-/** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
-/** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
-/** @typedef {Object} PoolAndBalance @property {string} poolAddress @property {string | undefined} balance */
-
-const erc20ABI =
-  // @ts-ignore
-  fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
-
-/**
- * @typedef {Object} State
- * @property {string | undefined} poolBalance - The user's balance of the pool's tokens
- * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
- * @property {string | undefined} userAddress - The user's address
- * @property {number} refreshTick - A number that triggers a refresh of the data when it changes
- */
+const erc20ABI = fetch(
+  "https://raw.githubusercontent.com/dredshep/dev/main/abi.json"
+).body;
 
 State.init({
   poolBalance: undefined,
@@ -35,32 +13,19 @@ if (state.errorGettingBalance)
 
 const missingProps = [];
 
-// @ts-ignore
 if (!props.pool) missingProps.push("pool (TransformedPool)");
-// @ts-ignore
 if (!props.operation) missingProps.push('operation ("stake" | "unstake")');
-// @ts-ignore
 if (!props.vaultAddress) missingProps.push("vaultAddress (string)");
-// @ts-ignore
 if (!props.balancerQueriesAddress)
   missingProps.push("balancerQueriesAddress (string)");
-// @ts-ignore
-if (props.pool && !props.pool.id)
+if (!props.pool.id)
   missingProps.push("pool has no id, check type (TransformedPool)");
 
-const pool =
-  // @ts-ignore
-  props.pool;
+const pool = props.pool;
 
-/** @type {string} */
-const VAULT_ADDRESS =
-  // @ts-ignore
-  props.vaultAddress;
+const VAULT_ADDRESS = props.vaultAddress;
 
-/** @type {string} */
-const BALANCER_QUERIES_ADDRESS =
-  // @ts-ignore
-  props.balancerQueriesAddress;
+const BALANCER_QUERIES_ADDRESS = props.balancerQueriesAddress;
 
 function MissingPropsWarning({ missingProps }) {
   return (
@@ -89,7 +54,6 @@ function MissingPropsWarning({ missingProps }) {
 }
 
 if (missingProps.length) {
-  // @ts-ignore
   return <MissingPropsWarning missingProps={missingProps} />;
 }
 
@@ -120,6 +84,7 @@ function getUserBalance(poolAddress, userAddress) {
       .balanceOf(userAddress)
       .then((/** @type {{ toString: () => string; }} */ balance) => {
         const formattedBalance = ethers.utils.formatUnits(balance, 18);
+
         return formattedBalance;
       });
     return balance;
@@ -188,6 +153,7 @@ const VerticalPair = ({ title, value, end }) => {
   const isEnd = !!end;
   return (
     <div className="d-flex flex-column">
+      {/* size small */}
       <p
         className={
           "text-secondary text-uppercase fw-bold mb-0 text-nowrap " +
@@ -207,15 +173,6 @@ const VerticalPair = ({ title, value, end }) => {
   );
 };
 
-/**
- * @typedef {Object} StakeUnstakeButtonAndFormProps
- * @property {"stake"|"unstake"} operation
- * @property {TransformedPool} pool
- * @property {string} vaultAddress
- * @property {string} balancerQueriesAddress
- */
-
-/** @type {StakeUnstakeButtonAndFormProps} */
 const stakeWidgetProps = {
   pool,
   operation: "stake",
@@ -223,7 +180,6 @@ const stakeWidgetProps = {
   balancerQueriesAddress: BALANCER_QUERIES_ADDRESS,
 };
 
-/** @type {StakeUnstakeButtonAndFormProps} */
 const unstakeWidgetProps = {
   pool,
   operation: "unstake",
@@ -244,7 +200,7 @@ function MainComponent() {
         <h5 className="card-title">
           {pool.tokens
             .map((t) => <span title={t.name}>{t.symbol || "a"}a</span>)
-            // @ts-ignore
+
             .reduce((prev, curr) => [prev, " / ", curr])}
         </h5>
       </div>
@@ -276,7 +232,6 @@ function MainComponent() {
               <table
                 className="table table-sm table-transparent text-light border-secondary"
                 style={{
-                  // max size is like 150px
                   maxWidth: "200px",
                   marginTop: "-0.25rem",
                 }}
@@ -334,7 +289,6 @@ function MainComponent() {
                 />
               </div>
               <div className="d-flex justify-content-end gap-3">
-                {/* tiny reload button */}
                 <button
                   className="btn btn-sm btn-outline-secondary fs-5 pt-2"
                   onClick={() => {
@@ -369,5 +323,4 @@ function MainComponent() {
   );
 }
 
-// @ts-ignore
 return <MainComponent />;

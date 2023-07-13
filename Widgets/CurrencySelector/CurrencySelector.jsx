@@ -6,7 +6,7 @@
 /** @typedef {Object} SPoolId @property {string} totalWeight */
 /** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
 /** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
-/** @typedef {Object} TokenWeights @property {string} address @property {string} weight */
+/** @typedef {Object} TokenWeights @property {string} address @property {number} weight */
 /** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
 /** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
 /** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */

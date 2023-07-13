@@ -1,0 +1,55 @@
+{
+  "pool": {
+    "id": "0x8d1acc804cbce52addb01f1076bb3723c516f27b000200000000000000000015",
+    "address": "0x8d1acc804cbce52addb01f1076bb3723c516f27b",
+    "tokensList": [
+      "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
+      "0x88267177ec1420648ba7cbfef824f14b9f637985"
+    ],
+    "totalWeight": "1",
+    "totalShares": "1.999999999999989951",
+    "holdersCount": "2",
+    "poolType": "Weighted",
+    "poolTypeVersion": 4,
+    "tokenWeights": [
+      {
+        "address": "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
+        "weight": "0.5"
+      },
+      {
+        "address": "0x88267177ec1420648ba7cbfef824f14b9f637985",
+        "weight": "0.5"
+      }
+    ],
+    "totalValueLocked": "0",
+    "tokens": [
+      {
+        "name": "Dredshep Test Token 2",
+        "symbol": "DTT2",
+        "address": "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
+        "decimals": 18,
+        "totalBalanceUSD": "0",
+        "totalBalanceNotional": "1.00000000000019999",
+        "totalVolumeUSD": "0",
+        "totalVolumeNotional": "0",
+        "latestUSDPrice": null,
+        "latestPrice": null
+      },
+      {
+        "name": "Test Dredso",
+        "symbol": "TDSO",
+        "address": "0x88267177ec1420648ba7cbfef824f14b9f637985",
+        "decimals": 18,
+        "totalBalanceUSD": "0",
+        "totalBalanceNotional": "1",
+        "totalVolumeUSD": "0",
+        "totalVolumeNotional": "0",
+        "latestUSDPrice": null,
+        "latestPrice": null
+      }
+    ]
+  },
+  "operation": "unstake",
+  "vaultAddress": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+  "balancerQueriesAddress": "0x1802953277FD955f9a254B80Aa0582f193cF1d77"
+}

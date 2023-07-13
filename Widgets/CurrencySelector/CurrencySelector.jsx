@@ -65,158 +65,24 @@
  * @property {string} className
  */
 
-/** @type {Props["operation"]} */
-props.operation = "stake";
-/** @type {Props["pool"]} */
-props.pool = {
-  id: "0x8d1acc804cbce52addb01f1076bb3723c516f27b000200000000000000000015",
-  address: "0x8d1acc804cbce52addb01f1076bb3723c516f27b",
-  tokensList: [
-    "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
-    "0x88267177ec1420648ba7cbfef824f14b9f637985",
-  ],
-  totalWeight: "1",
-  totalShares: "1.999999999999989951",
-  holdersCount: "2",
-  poolType: "Weighted",
-  poolTypeVersion: 4,
-  tokenWeights: [
-    {
-      address: "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
-      weight: "0.5",
-    },
-    {
-      address: "0x88267177ec1420648ba7cbfef824f14b9f637985",
-      weight: "0.5",
-    },
-  ],
-  totalValueLocked: "0",
-  tokens: [
-    {
-      name: "Dredshep Test Token 2",
-      symbol: "DTT2",
-      address: "0x6a1ab80d1b161844948cc75c965c0d0242dbc630",
-      decimals: 18,
-      totalBalanceUSD: "0",
-      totalBalanceNotional: "1.00000000000019999",
-      totalVolumeUSD: "0",
-      totalVolumeNotional: "0",
-      latestUSDPrice: null,
-      latestPrice: null,
-    },
-    {
-      name: "Test Dredso",
-      symbol: "TDSO",
-      address: "0x88267177ec1420648ba7cbfef824f14b9f637985",
-      decimals: 18,
-      totalBalanceUSD: "0",
-      totalBalanceNotional: "1",
-      totalVolumeUSD: "0",
-      totalVolumeNotional: "0",
-      latestUSDPrice: null,
-      latestPrice: null,
-    },
-  ],
-};
-/** @type {Props["erc20ABI"]} */
-props.erc20ABI =
-  // @ts-ignore
-  fetch("https://raw.githubusercontent.com/dredshep/dev/main/abi.json").body;
-/** @type {Props["test"]} */
-props.test = true;
-/** @type {Props["className"]} */
-props.className = "";
-/** @type {StakeUnstakeCallback} */
-props.stake = async (poolAddress, userAddress, sToken, abi) => (
-  console.log("stake", poolAddress, userAddress, sToken, abi), true
-);
-/** @type {StakeUnstakeCallback} */
-props.unstake = async (poolAddress, userAddress, sToken, abi) => (
-  console.log("unstake", poolAddress, userAddress, sToken, abi), true
-);
-
-/**
- * Joins a pool by sending a transaction to the Balancer contract.
- * @param {string} poolId - The ID of the pool to join.
- * @param {string} sender - The address of the sender.
- * @param {string} recipient - The address of the recipient.
- * @param {string} joinAmount - The amount of tokens to join the pool with.
- * @param {Object} contract - The Balancer contract instance.
- * @returns {Promise<Object>} - The transaction receipt.
- */
-async function joinPool(poolId, sender, recipient, joinAmount, contract) {
-  const request = {
-    assets: [
-      /* array of token addresses involved in the transaction */
-    ],
-    maxAmountsIn: [
-      /* array of maximum amounts of tokens the sender is willing to send. In your case, it would be [joinAmount] */
-    ],
-    userData: ethers.utils.defaultAbiCoder.encode(
-      [0],
-      [joinAmount] // Join amount
-    ),
-    fromInternalBalance: false, // Or true, if you're using Balancer's internal balances
-  };
-
-  try {
-    const tx = await contract.joinPool(poolId, sender, recipient, request);
-    const receipt = await tx.wait();
-    return receipt;
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-/**
- * Exits a pool by sending a transaction to the Balancer contract.
- * @param {string} poolId - The ID of the pool to exit.
- * @param {string} sender - The address of the sender.
- * @param {string} recipient - The address of the recipient.
- * @param {string} exitAmount - The amount of pool tokens to exit.
- * @param {Object} contract - The Balancer contract instance.
- * @returns {Promise<Object>} - The transaction receipt.
- */
-async function exitPool(poolId, sender, recipient, exitAmount, contract) {
-  const request = {
-    assets: [
-      /* array of token addresses involved in the transaction */
-    ],
-    minAmountsOut: [
-      /* array of minimum amounts of tokens the sender is willing to receive. In your case, it would be [exitAmount] */
-    ],
-    userData: ethers.utils.defaultAbiCoder.encode(
-      [0],
-      [exitAmount] // Exit amount
-    ),
-    toInternalBalance: false, // Or true, if you're using Balancer's internal balances
-  };
-
-  try {
-    const tx = await contract.exitPool(poolId, sender, recipient, request);
-    const receipt = await tx.wait();
-    return receipt;
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-// /** @type {string} */
-// props.poolBalance = "0";
-
 const missingProps = [];
-// @ts-ignore
-if (!props.operation) missingProps.push('operation ("stake"|"unstake")');
+if (
+  // @ts-ignore
+  !props.operation ||
+  // @ts-ignore
+  (props.operation !== "stake" && props.operation !== "unstake")
+)
+  missingProps.push('operation ("stake"|"unstake")');
 // @ts-ignore
 if (!props.pool) missingProps.push("pool (TransformedPool)");
 // @ts-ignore
-if (!props.erc20ABI) missingProps.push("erc20ABI (string)");
-// // @ts-ignore
-// if (!props.stake) missingProps.push("stake (StakeUnstakeCallback)");
-// // @ts-ignore
-// if (!props.unstake) missingProps.push("unstake (StakeUnstakeCallback)");
+if (!props.vaultAddress) missingProps.push("vaultAddress (string)");
 // @ts-ignore
-// if (!props.poolBalance) missingProps.push("poolBalance (string)");
+if (!props.balancerQueriesAddress)
+  missingProps.push("balancerQueriesAddress (string)");
+// @ts-ignore
+if (!props.pool.id)
+  missingProps.push("pool has no id, check type (TransformedPool)");
 
 function MissingPropsWarning({ missingProps }) {
   return (
@@ -242,29 +108,14 @@ const pool =
   props.pool;
 
 /** @type {string} */
-const className =
+const VAULT_ADDRESS =
   // @ts-ignore
-  props.className;
+  props.vaultAddress;
 
 /** @type {string} */
-const erc20ABI =
+const BALANCER_QUERIES_ADDRESS =
   // @ts-ignore
-  props.erc20ABI;
-
-/** @type {boolean} */
-const test =
-  // @ts-ignore
-  props.test;
-
-// /** @type {StakeUnstakeCallback} */
-// const unstake =
-//   // @ts-ignore
-//   props.unstake;
-
-// /** @type {StakeUnstakeCallback} */
-// const stake =
-//   // @ts-ignore
-//   props.stake;
+  props.vaultAddress;
 
 /**********************************************************************
  * Stake & Unstake Functions
@@ -275,7 +126,6 @@ const fetchBody = (url) => fetch(url).body;
 const vaultAbi = fetchBody(
   "https://gist.githubusercontent.com/dredshep/728298ed3649bb12cd2c3638e0e1e2fb/raw/21b0c88dd84ac06cc380472b88004ad43f8a688b/balancerVaultABI.json"
 );
-const sepoliaVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
 /**
  * @typedef {Object} JoinPoolArgs
@@ -295,7 +145,7 @@ const sepoliaVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
  */
 function joinPool(joinArgs) {
   const vault = new ethers.Contract(
-    sepoliaVaultAddress,
+    VAULT_ADDRESS,
     vaultAbi,
     Ethers.provider().getSigner()
   );
@@ -332,7 +182,7 @@ function joinPool(joinArgs) {
  */
 function exitPool(exitArgs) {
   const vault = new ethers.Contract(
-    sepoliaVaultAddress,
+    VAULT_ADDRESS,
     vaultAbi,
     Ethers.provider().getSigner()
   );
@@ -363,9 +213,6 @@ function joinOrExitPool(joinExitFunctionArgs) {
   } else {
     throw new Error("Must provide either exitArgs or joinArgs");
   }
-  // vault takes 4 args: poolId, sender, recipient, JoinExitPoolRequest
-  // joinPoolRequest is an array with 4 args: assets, maxAmountsIn, userData, fromInternalBalance
-  // userData is a bytes array with 2 args: init, exactTokensIn
   txPromise
     ?.then?.((tx) => {
       console.log("joinOrExitPool() transaction emitted TX.then: tx:", tx);
@@ -378,7 +225,7 @@ function joinOrExitPool(joinExitFunctionArgs) {
           // refresh balances
 
           fetchAndUpdateBalance(state, getUserBalance, pool, userAddress, true);
-          initializeTokenBalances(state, getUserBalance, true);
+          initializeTokenBalances(state, getUserBalance);
         })
         ?.catch?.((e) => {
           console.log(
@@ -407,24 +254,6 @@ const MAX = ethers.BigNumber.from(
  */
 const encode = (types, values) =>
   ethers.utils.defaultAbiCoder.encode(types, values);
-
-/** @type {JoinPoolArgs} */
-const joinArgs = {
-  poolId: "0x8D1ACC804CBCE52ADDB01F1076BB3723C516F27B000200000000000000000015",
-  sender: "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
-  recipient: "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
-  sortedTokenAddresses: [
-    "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-    "0x6A1Ab80d1B161844948CC75C965C0D0242dbc630",
-  ].sort(),
-  maxAmountsIn: [ethers.BigNumber.from(10).pow(5), ZERO],
-  userData: encode(
-    ["uint256", "uint256[]", "uint256"],
-    // 0 is INIT (first ever join to a pool), 1 is EXACT_TOKENS_IN.
-    [1, [ethers.BigNumber.from(10).pow(5), ZERO], ZERO]
-  ),
-  fromInternalBalance: false,
-};
 
 /**
  * Checks if the exit is for a single token.
@@ -467,7 +296,7 @@ function queryExit(poolId, sender, recipient, rawRequest) {
   ];
 
   const balancerQueriesContract = new ethers.Contract(
-    "0x1802953277FD955f9a254B80Aa0582f193cF1d77", // BalancerQueries address on Sepolia
+    BALANCER_QUERIES_ADDRESS,
     fetchBody(
       "https://gist.githubusercontent.com/dredshep/728298ed3649bb12cd2c3638e0e1e2fb/raw/df57d6f23060805d02a533b0239d93d0ae807e97/balancerQueriesABI.json"
     ),
@@ -501,26 +330,6 @@ function queryExit(poolId, sender, recipient, rawRequest) {
   );
   return queryResultPromise;
 }
-
-/** @type {ExitPoolArgs} */
-const exitArgs = {
-  poolId: "0x8D1ACC804CBCE52ADDB01F1076BB3723C516F27B000200000000000000000015",
-  sender: "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
-  recipient: "0x83ABeaFE7bA5bE9b173149603e13550DCC2ffE57",
-  sortedTokenAddresses: [
-    "0x88267177EC1420648Ba7CBFef824f14B9F637985",
-    "0x6A1Ab80d1B161844948CC75C965C0D0242dbc630",
-  ].sort(),
-  minAmountsOut: [ethers.BigNumber.from(5), ZERO],
-  // https://docs.balancer.fi/reference/joins-and-exits/pool-exits.html#encoding
-  // userdata is JoinKind (2), amountsOut (variable) and maxBPTAmountIn (MAX)
-  // JoinKind: 2 = BPT_IN_FOR_EXACT_TOKENS_OUT, enter custom amount of USDC/USDT/etc. to receive a variable amount of BPT
-  userData: encode(
-    ["uint256", "uint256[]", "uint256"],
-    [2, [ethers.BigNumber.from(5), ZERO], MAX]
-  ),
-  toInternalBalance: false,
-};
 
 /**
  * Queries the BalancerQueries contract for the amount of pool tokens and token amounts that will be received upon exiting a pool, then executes the exit.
@@ -603,9 +412,7 @@ function checkAllowanceAmount(poolAddress, userAddress, sToken, abi) {
     let checkedPoolAddress, checkedUserAddress, checkedTokenAddress;
     try {
       // checkedPoolAddress = ethers.utils.getAddress(poolAddress);
-      checkedPoolAddress = ethers.utils.getAddress(
-        "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
-      );
+      checkedPoolAddress = ethers.utils.getAddress(VAULT_ADDRESS);
       checkedUserAddress = ethers.utils.getAddress(userAddress);
       checkedTokenAddress = ethers.utils.getAddress(sToken.address);
     } catch (error) {
@@ -626,14 +433,8 @@ function checkAllowanceAmount(poolAddress, userAddress, sToken, abi) {
     );
     const allowance = tokenContract
       // .allowance(userAddress, poolAddress)
-      .allowance(userAddress, "0xBA12222222228d8Ba445958a75a0704d566BF2C8")
+      .allowance(userAddress, VAULT_ADDRESS)
       .then((/** @type {{ gt: (bignum: any) => boolean; }} */ allowance) => {
-        // log the parsed allowance
-        // console.log(
-        //   "allowance",
-        //   ethers.utils.formatUnits(allowance, sToken.decimals)
-        // );
-        // console.log(typeof allowance);
         return parseFloat(ethers.utils.formatUnits(allowance, sToken.decimals));
       });
     return allowance;
@@ -659,7 +460,9 @@ const indexedTokens = Object.values(pool.tokens).reduce(
 const tokenEntries = Object.entries(indexedTokens);
 const tokenEntriesLength = tokenEntries.length;
 const checkedTokens = [];
-
+const erc20ABI = fetchBody(
+  "https://raw.githubusercontent.com/dredshep/dev/main/abi.json"
+);
 // check only if checkedTokens.length < tokenEntriesLength
 if (tokenEntriesLength > 0 && checkedTokens.length < tokenEntriesLength) {
   tokenEntries.forEach(
@@ -718,7 +521,7 @@ function approve(poolAddress, userAddress, sToken, amount, erc20ABI) {
     const preFilledAmount = ethers.utils.parseUnits(amount, sToken.decimals);
     const allowance = tokenContract
       // .approve(poolAddress, preFilledAmount)
-      .approve("0xBA12222222228d8Ba445958a75a0704d566BF2C8", preFilledAmount, {
+      .approve(VAULT_ADDRESS, preFilledAmount, {
         gasLimit: 6000000,
       })
       .then((/** @type {{ toString: () => string; }} */ allowance) => {
@@ -800,13 +603,13 @@ function getUserBalance(poolAddress, userAddress) {
 
 /**
  * @typedef {Object} State
+ * @property {boolean} initializedBalances - Whether the balances have been initialized or not.
  * @property {string} inputAmount - The input amount (that user attempts to type in).
  * @property {string } lastValidInput - The last valid input amount.
  * @property {string | undefined} selectedToken - The selected token's address.
  * @property {boolean} tokenSelectorIsOpen - Whether the token selector is open or not.
  * @property {CurrencySelectorGroup} form - Forms object for the currency selector.
  * @property {string | undefined} poolBalance - The nominal balance the user has staked in the pool.
- * @property {Object<string, string>} tokenBalances - The nominal balance the user has available in their wallet per token.
  * @property {object[] | undefined} customWithdrawableAmounts - The BigNumber nominal token balance the user has available for the selected token in the unstake form.
  * @property {object} maxWithdrawableAmounts - The BigNumber nominal token balance the user has available for the selected token in the unstake form.
  * @property {string | undefined} userAddress - User's address.
@@ -816,6 +619,7 @@ function getUserBalance(poolAddress, userAddress) {
 // * @property {Object<string, boolean>} indexedApprovedTokens - Whether the user has approved the pool to spend their tokens.
 
 State.init({
+  initializedBalances: false,
   inputAmount: "",
   lastValidInput: "",
   selectedToken: undefined,
@@ -823,71 +627,70 @@ State.init({
   // @ts-ignore
   form: {},
   poolBalance: undefined,
-  tokenBalances: {},
+  tokenBalances: undefined,
   customWithdrawableAmounts: undefined,
   maxWithdrawableAmounts: undefined,
-  // disconnected: true,
   userAddress: undefined,
   errorGettingBalance: undefined,
-  // indexedApprovedTokens: {},
   indexedApprovalAmountPerToken: {},
 });
 
-// State.update({
-//   poolBalance:
-//     // @ts-ignore
-//     props.poolBalance,
-// });
-
-// for each token in the pool, find its balance and update state.tokenBalances["tokenAddress"] = balance
-let isTokenBalanceInitialized = false;
+/** @type {Object<string, string>} The nominal balance the user has available in their wallet per token. */
+const tokenBalances = {};
+let initializedBalances = false;
 
 /**
  * Initializes the token balances for the current user.
  * @param {Object} state - The current state object.
  * @param {Function} getUserBalance - The function to get the user balance.
- * @param {Boolean} force - Whether to force the initialization process regardless of the initialized state.
- * @returns {Promise<void>} - A promise that resolves when the token balances have been initialized.
+ * @returns {Promise<any>} - A promise that resolves when the token balances have been initialized.
  */
-async function initializeTokenBalances(state, getUserBalance, force) {
-  if (isTokenBalanceInitialized && !force) {
-    return;
-  }
-  isTokenBalanceInitialized = true;
-
-  const tokenCount = state.form.tokenAddresses.length;
-  let tokenCountDone = 0;
-
-  for (let i = 0; i < tokenCount; i++) {
-    const tokenAddress = state.form.tokenAddresses[i];
+async function initializeTokenBalances(state, getUserBalance) {
+  console.log("initializeTokenBalances() called as the component is rendered.");
+  pool.tokensList.forEach((/** @type {string} */ tokenAddress, i) => {
     const userAddress = state.userAddress;
-    if (!userAddress) continue;
+    if (!userAddress) return;
     const balance = getUserBalance(tokenAddress, userAddress);
     if (!balance || typeof balance === "string") {
-      State.update({
-        errorGettingBalance: balance,
-      });
-      continue;
+      // State.update({
+      //   errorGettingBalance: balance ?? "Balance is undefined",
+      // });
+      return;
     }
     balance.then((/** @type {string} */ balance) => {
-      State.update({
-        tokenBalances: {
-          ...state.tokenBalances,
-          [tokenAddress]: balance,
-        },
-      });
-      tokenCountDone++;
-      if (tokenCountDone === tokenCount) {
-        State.update({
-          errorGettingBalance: undefined,
-        });
+      console.log("balance", balance);
+      tokenBalances[tokenAddress] = balance;
+      if (i === pool.tokensList.length - 1) {
+        console.log("initializedBalances = true");
+        initializedBalances = true;
       }
     });
-  }
+  });
+  return;
 }
 
-// Call the function to initialize the token balances by default
-initializeTokenBalances(state, getUserBalance, false);
+if (!initializedBalances) {
+  // @ts-ignore
+  initializeTokenBalances(state, getUserBalance);
+}
+
+// if (!state.initializedBalances) {
+//   initializeTokenBalances(state, getUserBalance);
+// }
+
+// if (state.initializedBalances) {
+//   console.log("token balances", JSON.stringify(tokenBalances, null, 2));
+// }
+
+// if (!state.initializedBalances) {
+//   // @ts-ignore
+//   return <div>Loading...</div>;
+// }
+
+// if (!tokenBalances) {
+//   // @ts-ignore
+//   return <div>Loading...</div>;
+// }
 
 /**
  * @param {string} inputAmount
@@ -1127,7 +930,7 @@ function StakeUnstakeWidget(innerProps) {
             </h5>
           </div>
           <div className="card-body">
-            <innerProps.FormWidget className="" operation={operation} />
+            <innerProps.FormWidget operation={operation} />
           </div>
         </div>
       </Dialog.Content>
@@ -1255,7 +1058,7 @@ function updateWithdrawableAmounts(init) {
  * Renders a currency selector component.
  *
  * @callback CurrencySelector
- * @param {{ className: string, operation: "stake" | "unstake" }} props - The props for the currency selector component.
+ * @param {{ operation: "stake" | "unstake" }} props - The props for the currency selector component.
  * @returns {React.JSX.Element} - The currency selector component.
  */
 
@@ -1263,7 +1066,7 @@ function updateWithdrawableAmounts(init) {
  * Renders a currency selector component.
  * @type {CurrencySelector}
  */
-function CurrencySelector({ className, operation }) {
+function CurrencySelector({ operation }) {
   /** @type {CurrencySelectorGroup} */
   const currencySelectorGroup = state.form;
 
@@ -1274,7 +1077,7 @@ function CurrencySelector({ className, operation }) {
     (operation === "stake" && state.selectedToken) || operation === "unstake";
 
   return (
-    <div className={className}>
+    <div>
       <div className="d-flex flex-column container py-2 pb-3">
         {!state.userAddress ? (
           <h6>No user address available, connect wallet.</h6>
@@ -1440,9 +1243,9 @@ function CurrencySelector({ className, operation }) {
                       paddingLeft: "0px",
                     }}
                   >
-                    {Object.keys(state.tokenBalances).map((tokenAddress) => {
+                    {Object.keys(tokenBalances).map((tokenAddress) => {
                       const oneForm = oneForms[tokenAddress];
-                      const tokenBalance = state.tokenBalances[tokenAddress];
+                      const tokenBalance = tokenBalances[tokenAddress];
                       return (
                         <li
                           key={tokenAddress}
@@ -1510,7 +1313,7 @@ function CurrencySelector({ className, operation }) {
                         return;
                       } else if (state.selectedToken && operation === "stake") {
                         const maxStakeAmount =
-                          state.tokenBalances[state.selectedToken];
+                          tokenBalances[state.selectedToken];
                         State.update({
                           inputAmount: processInputAmount(maxStakeAmount),
                         });
@@ -1527,10 +1330,8 @@ function CurrencySelector({ className, operation }) {
                     {operation === "unstake"
                       ? "(Max: " + state.poolBalance + ")"
                       : state.selectedToken &&
-                        state.tokenBalances[state.selectedToken]
-                      ? "(Max: " +
-                        state.tokenBalances[state.selectedToken] +
-                        ")"
+                        tokenBalances[state.selectedToken]
+                      ? "(Max: " + tokenBalances[state.selectedToken] + ")"
                       : undefined}
                   </span>
                 </div>
@@ -1560,7 +1361,7 @@ function CurrencySelector({ className, operation }) {
             {operation === "stake" &&
               state.selectedToken &&
               parseFloat(state.inputAmount) >
-                parseFloat(state.tokenBalances[state.selectedToken] ?? "0") && (
+                parseFloat(tokenBalances[state.selectedToken] ?? "0") && (
                 <div className="d-flex flex-row mb-2">
                   <div
                     className="alert alert-warning mt-1"
@@ -1610,13 +1411,6 @@ function CurrencySelector({ className, operation }) {
                         console.log("no token selected, cannot stake");
                         return;
                       }
-                      // stake(
-                      //   pool.address,
-                      //   state.selectedToken,
-                      //   indexedTokens[state.selectedToken],
-                      //   state.inputAmount
-                      // );
-                      // check if approved first if not use the approve function
                       if (checkSelectedTokenIsApproved()) {
                         const sortedTokenAddresses = [...tokenAddresses].sort();
                         // get sorted token amounts by mapping token amounts to tokenAddresses indexes
@@ -1702,17 +1496,6 @@ function CurrencySelector({ className, operation }) {
                           [1, bigNumberInputAmount]
                         ),
                       };
-                      // console.log("exitArgs", {
-                      //   ...exitArgs,
-                      //   minAmountsOut: exitArgs.minAmountsOut.map((amount) =>
-                      //     // decode big nums
-                      //     ethers.utils.formatEther(amount)
-                      //   ),
-                      //   userData: ethers.utils.defaultAbiCoder.decode(
-                      //     ["uint256", "uint256[]", "uint256"],
-                      //     exitArgs.userData
-                      //   ),
-                      // });
                       queryThenExit(
                         pool.id,
                         userAddress,
@@ -1742,56 +1525,12 @@ function CurrencySelector({ className, operation }) {
   );
 }
 
-function logAndReturnBalance() {
-  console.log("logged balance while rendering", state.form.poolBalance);
-  return state.form.poolBalance;
-}
-
-function TestComponent() {
-  return (
-    <div className="container flex">
-      <div
-        className="bg-dark rounded-2"
-        style={{
-          width: "250px",
-        }}
-      >
-        <CurrencySelector className="my-2" operation="stake" />
-      </div>
-      <Web3Connect connectLabel="Connect wallet with Web3" className="mb-3" />
-      <h2>User Balance:</h2>
-      <pre>{JSON.stringify(state.poolBalance, null, 2)}</pre>
-      <h2>state.form Information:</h2>
-      <pre>{JSON.stringify(state.form, null, 2)}</pre>
-      <h2>Pool Information:</h2>
-      <pre>{JSON.stringify(pool, null, 2)}</pre>
-    </div>
-  );
-}
-
-function MainReturn() {
-  return test ? (
-    <TestComponent />
-  ) : (
-    <CurrencySelector operation={operation} className={className || ""} />
-  );
-}
-
 // @ts-ignore
-// return <MainReturn />;
 return (
-  <div className="d-flex gap-3">
-    <StakeUnstakeWidget
-      poolBalance={poolBalance}
-      errorGettingBalance={errorGettingBalance}
-      operation={operation === "stake" ? "unstake" : "stake"}
-      FormWidget={CurrencySelector}
-    />
-    <StakeUnstakeWidget
-      poolBalance={poolBalance}
-      errorGettingBalance={errorGettingBalance}
-      operation={operation}
-      FormWidget={CurrencySelector}
-    />
-  </div>
+  <StakeUnstakeWidget
+    poolBalance={poolBalance}
+    errorGettingBalance={errorGettingBalance}
+    operation={operation}
+    FormWidget={CurrencySelector}
+  />
 );

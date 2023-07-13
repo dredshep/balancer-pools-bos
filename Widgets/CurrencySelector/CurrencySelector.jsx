@@ -652,6 +652,7 @@ let isTokenBalanceInitialized = false;
  * @param {Boolean} force - Whether to force the initialization process regardless of the initialized state.
  * @returns {Promise<void>} - A promise that resolves when the token balances have been initialized.
  */
+
 async function initializeTokenBalances(state, getUserBalance, force) {
   console.log("INITIALIZING TOKEN BALANCES");
   if (isTokenBalanceInitialized && !force) {
@@ -661,6 +662,7 @@ async function initializeTokenBalances(state, getUserBalance, force) {
 
   const tokenCount = state.form.tokenAddresses.length;
   let tokenCountDone = 0;
+  const balances = [];
 
   for (let i = 0; i < tokenCount; i++) {
     const tokenAddress = state.form.tokenAddresses[i];
@@ -674,12 +676,19 @@ async function initializeTokenBalances(state, getUserBalance, force) {
       continue;
     }
     balance.then((/** @type {string} */ balance) => {
-      State.update({
-        tokenBalances: {
-          ...state.tokenBalances,
-          [tokenAddress]: balance,
-        },
-      });
+      balances.push(balance);
+      if (balances.length === tokenCount) {
+        balances.reduce((acc, balance, i) => {
+          acc[state.form.tokenAddresses[i]] = balance;
+          return acc;
+        }, {});
+        State.update({
+          tokenBalances: balances.reduce((acc, balance, i) => {
+            acc[state.form.tokenAddresses[i]] = balance;
+            return acc;
+          }, {}),
+        });
+      }
       tokenCountDone++;
       if (tokenCountDone === tokenCount) {
         State.update({
@@ -689,9 +698,20 @@ async function initializeTokenBalances(state, getUserBalance, force) {
     });
   }
 }
-
-// Call the function to initialize the token balances by default
-initializeTokenBalances(state, getUserBalance, false);
+const noBalances =
+  !state.tokenBalances ||
+  typeof state.tokenBalances !== "object" ||
+  Object.keys(state.tokenBalances).length === 0;
+if (noBalances) {
+  State.update({
+    tokenBalances: {},
+  });
+  initializeTokenBalances(state, getUserBalance, false);
+}
+if (state.errorGettingBalance) {
+  // @ts-ignore
+  return <div>Error getting balance: {state.errorGettingBalance}</div>;
+}
 
 /**
  * @param {string} inputAmount

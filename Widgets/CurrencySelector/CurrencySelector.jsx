@@ -225,7 +225,7 @@ function joinOrExitPool(joinExitFunctionArgs) {
           // refresh balances
 
           fetchAndUpdateBalance(state, getUserBalance, pool, userAddress, true);
-          initializeTokenBalances(state, getUserBalance);
+          initializeTokenBalances(state, getUserBalance, true);
         })
         ?.catch?.((e) => {
           console.log(
@@ -603,13 +603,13 @@ function getUserBalance(poolAddress, userAddress) {
 
 /**
  * @typedef {Object} State
- * @property {boolean} initializedBalances - Whether the balances have been initialized or not.
  * @property {string} inputAmount - The input amount (that user attempts to type in).
  * @property {string } lastValidInput - The last valid input amount.
  * @property {string | undefined} selectedToken - The selected token's address.
  * @property {boolean} tokenSelectorIsOpen - Whether the token selector is open or not.
  * @property {CurrencySelectorGroup} form - Forms object for the currency selector.
  * @property {string | undefined} poolBalance - The nominal balance the user has staked in the pool.
+ * @property {Object<string, string>} tokenBalances - The nominal balance the user has available in their wallet per token.
  * @property {object[] | undefined} customWithdrawableAmounts - The BigNumber nominal token balance the user has available for the selected token in the unstake form.
  * @property {object} maxWithdrawableAmounts - The BigNumber nominal token balance the user has available for the selected token in the unstake form.
  * @property {string | undefined} userAddress - User's address.
@@ -619,7 +619,6 @@ function getUserBalance(poolAddress, userAddress) {
 // * @property {Object<string, boolean>} indexedApprovedTokens - Whether the user has approved the pool to spend their tokens.
 
 State.init({
-  initializedBalances: false,
   inputAmount: "",
   lastValidInput: "",
   selectedToken: undefined,
@@ -627,70 +626,72 @@ State.init({
   // @ts-ignore
   form: {},
   poolBalance: undefined,
-  tokenBalances: undefined,
+  tokenBalances: {},
   customWithdrawableAmounts: undefined,
   maxWithdrawableAmounts: undefined,
+  // disconnected: true,
   userAddress: undefined,
   errorGettingBalance: undefined,
+  // indexedApprovedTokens: {},
   indexedApprovalAmountPerToken: {},
 });
 
-/** @type {Object<string, string>} The nominal balance the user has available in their wallet per token. */
-const tokenBalances = {};
-let initializedBalances = false;
+// State.update({
+//   poolBalance:
+//     // @ts-ignore
+//     props.poolBalance,
+// });
+
+// for each token in the pool, find its balance and update state.tokenBalances["tokenAddress"] = balance
+let isTokenBalanceInitialized = false;
 
 /**
  * Initializes the token balances for the current user.
  * @param {Object} state - The current state object.
  * @param {Function} getUserBalance - The function to get the user balance.
- * @returns {Promise<any>} - A promise that resolves when the token balances have been initialized.
+ * @param {Boolean} force - Whether to force the initialization process regardless of the initialized state.
+ * @returns {Promise<void>} - A promise that resolves when the token balances have been initialized.
  */
-async function initializeTokenBalances(state, getUserBalance) {
-  console.log("initializeTokenBalances() called as the component is rendered.");
-  pool.tokensList.forEach((/** @type {string} */ tokenAddress, i) => {
+async function initializeTokenBalances(state, getUserBalance, force) {
+  console.log("INITIALIZING TOKEN BALANCES");
+  if (isTokenBalanceInitialized && !force) {
+    return;
+  }
+  isTokenBalanceInitialized = true;
+
+  const tokenCount = state.form.tokenAddresses.length;
+  let tokenCountDone = 0;
+
+  for (let i = 0; i < tokenCount; i++) {
+    const tokenAddress = state.form.tokenAddresses[i];
     const userAddress = state.userAddress;
-    if (!userAddress) return;
+    if (!userAddress) continue;
     const balance = getUserBalance(tokenAddress, userAddress);
     if (!balance || typeof balance === "string") {
-      // State.update({
-      //   errorGettingBalance: balance ?? "Balance is undefined",
-      // });
-      return;
+      State.update({
+        errorGettingBalance: balance,
+      });
+      continue;
     }
     balance.then((/** @type {string} */ balance) => {
-      console.log("balance", balance);
-      tokenBalances[tokenAddress] = balance;
-      if (i === pool.tokensList.length - 1) {
-        console.log("initializedBalances = true");
-        initializedBalances = true;
+      State.update({
+        tokenBalances: {
+          ...state.tokenBalances,
+          [tokenAddress]: balance,
+        },
+      });
+      tokenCountDone++;
+      if (tokenCountDone === tokenCount) {
+        State.update({
+          errorGettingBalance: undefined,
+        });
       }
     });
-  });
-  return;
+  }
 }
 
-if (!initializedBalances) {
-  // @ts-ignore
-  initializeTokenBalances(state, getUserBalance);
-}
-
-// if (!state.initializedBalances) {
-//   initializeTokenBalances(state, getUserBalance);
-// }
-
-// if (state.initializedBalances) {
-//   console.log("token balances", JSON.stringify(tokenBalances, null, 2));
-// }
-
-// if (!state.initializedBalances) {
-//   // @ts-ignore
-//   return <div>Loading...</div>;
-// }
-
-// if (!tokenBalances) {
-//   // @ts-ignore
-//   return <div>Loading...</div>;
-// }
+// Call the function to initialize the token balances by default
+initializeTokenBalances(state, getUserBalance, false);
 
 /**
  * @param {string} inputAmount
@@ -1243,9 +1244,9 @@ function CurrencySelector({ operation }) {
                       paddingLeft: "0px",
                     }}
                   >
-                    {Object.keys(tokenBalances).map((tokenAddress) => {
+                    {Object.keys(state.tokenBalances).map((tokenAddress) => {
                       const oneForm = oneForms[tokenAddress];
-                      const tokenBalance = tokenBalances[tokenAddress];
+                      const tokenBalance = state.tokenBalances[tokenAddress];
                       return (
                         <li
                           key={tokenAddress}
@@ -1313,7 +1314,7 @@ function CurrencySelector({ operation }) {
                         return;
                       } else if (state.selectedToken && operation === "stake") {
                         const maxStakeAmount =
-                          tokenBalances[state.selectedToken];
+                          state.tokenBalances[state.selectedToken];
                         State.update({
                           inputAmount: processInputAmount(maxStakeAmount),
                         });
@@ -1330,8 +1331,10 @@ function CurrencySelector({ operation }) {
                     {operation === "unstake"
                       ? "(Max: " + state.poolBalance + ")"
                       : state.selectedToken &&
-                        tokenBalances[state.selectedToken]
-                      ? "(Max: " + tokenBalances[state.selectedToken] + ")"
+                        state.tokenBalances[state.selectedToken]
+                      ? "(Max: " +
+                        state.tokenBalances[state.selectedToken] +
+                        ")"
                       : undefined}
                   </span>
                 </div>
@@ -1361,7 +1364,7 @@ function CurrencySelector({ operation }) {
             {operation === "stake" &&
               state.selectedToken &&
               parseFloat(state.inputAmount) >
-                parseFloat(tokenBalances[state.selectedToken] ?? "0") && (
+                parseFloat(state.tokenBalances[state.selectedToken] ?? "0") && (
                 <div className="d-flex flex-row mb-2">
                   <div
                     className="alert alert-warning mt-1"

@@ -20,7 +20,6 @@ const erc20ABI =
  * @typedef {Object} State
  * @property {string | undefined} poolBalance - The user's balance of the pool's tokens
  * @property {string | undefined} errorGettingBalance - Error message when trying to get the user's balance, if any.
- * @property {"stake" | "unstake" | false} downOpen - Error message when trying to get the user's balance, if any.
  * @property {string | undefined} userAddress - The user's address
  * @property {number} refreshTick - A number that triggers a refresh of the data when it changes
  */
@@ -28,12 +27,14 @@ const erc20ABI =
 State.init({
   poolBalance: undefined,
   errorGettingBalance: undefined,
-  downOpen: false,
   userAddress: undefined,
   refreshTick: 0,
 });
+if (state.errorGettingBalance)
+  console.log("Error getting balance: ", state.errorGettingBalance);
 
 const missingProps = [];
+
 // @ts-ignore
 if (!props.pool) missingProps.push("pool (TransformedPool)");
 // @ts-ignore
@@ -378,15 +379,6 @@ function MainComponent() {
     </div>
   );
 }
-
-// // @ts-ignore
-// return (
-//   <div className="d-flex flex-column gap-2">
-//     <Web3Connect connectLabel="Connect Wallet" />
-//     <MainComponent />
-//     <MainComponent />
-//   </div>
-// );
 
 // @ts-ignore
 return <MainComponent />;

@@ -55,15 +55,14 @@ function calculateTokenWeights(pool) {
   const getWeight = (
     /** @type {number} */ value,
     /** @type {number} */ decimals
-  ) => (value / (Number(totalValueLocked.num) * Number("1e" + decimals))) * 100;
+  ) => value / (Number(totalValueLocked.num) * Number("1e" + decimals));
   const weights = pool.tokens.map((_token) => {
     const { token } = _token;
     const floated = parseFloat(token.totalBalanceUSD);
     const weight = floated === 0 ? 0 : getWeight(floated, token.decimals);
-    console.log("weight:", weight);
     return {
       address: token.address,
-      weight,
+      weight: parseFloat(weight.toFixed(1)),
       token,
     };
   });
@@ -94,9 +93,9 @@ function calculateTotalValueLocked(pool) {
   };
 }
 
-const zkEVMGraphQLUri =
-  // "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
-  "https://api.studio.thegraph.com/proxy/24660/balancer-sepolia-v2/version/latest";
+// const zkEVMGraphQLUri =
+//   // "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest";
+//   "https://api.studio.thegraph.com/proxy/24660/balancer-sepolia-v2/version/latest";
 
 /**
  * @name getGraphQlQuerySync
@@ -111,8 +110,9 @@ function getGraphQlQuerySync(query) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
   };
+  const chainId = state.chainId || "0x1";
   // @ts-ignore
-  const { body } = fetch(zkEVMGraphQLUri, options);
+  const { body } = fetch(chainInfoObject[chainId].balancerSubgraphUrl, options);
   return body.data;
 }
 
@@ -123,13 +123,14 @@ function getGraphQlQuerySync(query) {
  * @example const data = runAllInOneQuery();
  */
 function runAllInOneQuery() {
+  const page = state.page || 0;
   const query = `{
     balancers(first: 5) {
       id
       poolCount
       totalLiquidity
     }
-    pools {
+    pools(first: 10, skip: ${page * 10}) {
       id
       address
       tokensList
@@ -205,15 +206,293 @@ function getTransformedData() {
   };
   return transformedData;
 }
+
+/**
+ * @typedef {Object} State
+ * @property {string | undefined} userAddress - The user's address
+ * @property {string | undefined} chainId - The chain ID
+ * @property {number} page - The current page
+ */
+State.init({ userAddress: undefined, chainId: undefined, page: 0 });
+
+/**@type {string | undefined} */
+const userAddress = Ethers.send("eth_requestAccounts", [])[0];
+if (userAddress) State.update({ userAddress });
+
+/** @type {ChainInfoObject} */
+const chainInfoObject = {
+  "0x1": {
+    name: "Ethereum Mainnet",
+    chainId: "0x1", // 1
+    shortName: "eth",
+    chain: "ETH",
+    network: "mainnet",
+    networkId: "1",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpc: ["https://main-light.eth.linkpool.io"],
+    faucets: [],
+    explorers: ["https://etherscan.io"],
+    balancerQueriesAddress: "0xE39B5e3B6D74016b2F6A9673D7d7493B6DF549d5",
+    vaultAddress: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+    balancerSubgraphUrl:
+      "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-v2",
+  },
+  // goerli
+  "0x5": {
+    name: "Goerli Testnet",
+    chainId: "0x5", // 5
+    shortName: "gor",
+    chain: "ETH",
+    network: "goerli",
+    networkId: "5",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpc: ["https://rpc.goerli.mudit.blog/"],
+    faucets: [
+      "https://goerli-faucet.slock.it/?address=${ADDRESS}",
+      "https://faucet.goerli.mudit.blog",
+    ],
+    explorers: ["https://goerli.etherscan.io"],
+    balancerQueriesAddress: "0xE39B5e3B6D74016b2F6A9673D7d7493B6DF549d5",
+    vaultAddress: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+    balancerSubgraphUrl:
+      "https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-goerli-v2",
+  },
+  // zkEVM
+  "0x44d": {
+    name: "zkEVM Mainnet",
+    chainId: "0x44d", // 1101
+    shortName: "zkEVM",
+    chain: "ETH",
+    network: "mainnet",
+    networkId: "44",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpc: ["https://rpc.ankr.com/polygon_zkevm"],
+    faucets: [],
+    explorers: ["https://zkevm.polygonscan.com"],
+    balancerQueriesAddress: "0x809B79b53F18E9bc08A961ED4678B901aC93213a",
+    vaultAddress: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+    balancerSubgraphUrl:
+      "https://api.studio.thegraph.com/query/24660/balancer-polygon-zk-v2/version/latest",
+  },
+  "0xaa36a7": {
+    name: "Sepolia Testnet",
+    chainId: "0xaa36a7", // 11155111
+    shortName: "sep",
+    chain: "ETH",
+    network: "testnet",
+    // networkId: "31337",
+    networkId: "11155111",
+    nativeCurrency: {
+      name: "Sepolia Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpc: ["https://rpc.sepolia.dev"],
+    faucets: ["https://faucet.sepolia.dev"],
+    explorers: ["https://sepolia.etherscan.io"],
+    balancerQueriesAddress: "0x1802953277FD955f9a254B80Aa0582f193cF1d77",
+    vaultAddress: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+    balancerSubgraphUrl:
+      "https://api.studio.thegraph.com/query/24660/balancer-sepolia-v2/version/latest",
+  },
+};
+/**
+ * @param {string} hexString
+ */
+function removeLeadingZero(hexString) {
+  if (hexString.startsWith("0x")) {
+    return "0x" + parseInt(hexString, 16).toString(16);
+  }
+}
+
+// get ethers chain id and update state
+function getNetwork() {
+  const getNetworkReq = Ethers?.provider?.()?.getNetwork?.();
+  getNetworkReq
+    ?.then((/** @type {{ chainId: string | number; }} */ network) => {
+      const hexId = removeLeadingZero(ethers.utils.hexlify(network.chainId));
+      State.update({
+        chainId: hexId,
+      });
+    })
+    ?.catch((error) => {
+      console.log("Error while getting network", error);
+    });
+}
+
+try {
+  getNetwork();
+} catch (error) {
+  console.log("2nd TryCatch (promise?): Error while getting network", error);
+}
+
+// if we don't have a chain id yet, try to get it before calling getTransformedData
+if (state.chainId) {
+  setTimeout(() => {
+    try {
+      if (!state.chainId) {
+        getNetwork();
+      }
+    } catch (error) {
+      console.log(
+        "3rd TryCatch (timeout?): Error while getting network",
+        error
+      );
+    }
+  }, 2500);
+}
+
+function ConnectButton() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        className="btn btn-primary btn-md mb-3"
+        style={{
+          filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+        }}
+        // style={{ height: "40px" }}
+      >
+        {userAddress
+          ? "Disconnect | Switch Network"
+          : "Connect wallet with Web3"}
+      </Popover.Trigger>
+      <Popover.Content
+        className="container py-4 text-dark"
+        style={{
+          width: "max-content",
+          zIndex: 1000,
+          // backgroundColor: "#1e1e1e",
+          backgroundColor: "#f1f1f1",
+          borderRadius: "8px",
+          // apply some deep shadow
+          boxShadow: "0px 0px 20px 0px rgba(0,0,0,0.75)",
+        }}
+      >
+        <Popover.Arrow style={{ fill: "#1e1e1e" }} />
+        <Widget
+          src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/NetworkSwitcherWithInfoTest"
+          props={{ chainInfoObject }}
+        />
+      </Popover.Content>
+    </Popover.Root>
+  );
+}
+
+if (!state.chainId) {
+  // @ts-ignore
+  return (
+    <div className="bg-dark d-flex flex-column align-items-center text-light">
+      <h1>Web3 not connected</h1>
+      <ConnectButton />
+    </div>
+  );
+}
+
 const transformedData = getTransformedData();
-console.log(JSON.stringify(transformedData.pools[0], null, 2));
+
+if (
+  !transformedData ||
+  !state.chainId ||
+  !state.userAddress ||
+  typeof state.page !== "number"
+) {
+  // @ts-ignore
+  return (
+    <div className="bg-dark d-flex flex-column align-items-center text-light">
+      <h1>Loading...</h1>
+      <ConnectButton />
+    </div>
+  );
+}
+
+function PaginationComponent() {
+  const page = state.page;
+  const setPage = (newPage) => {
+    State.update({ page: newPage });
+  };
+  const maxPage = Math.ceil(transformedData.balancers[0].poolCount / 10);
+  return (
+    <div className="d-flex justify-content-center mb-3 align-items-center gap-2">
+      {/* first page with double quote left */}
+      <button
+        className="btn btn-primary btn-md"
+        style={{
+          filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+        }}
+        onClick={() => setPage(0)}
+        disabled={page === 0}
+      >
+        {"«"}
+      </button>
+      <button
+        className="btn btn-primary btn-md"
+        style={{
+          filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+        }}
+        onClick={() => setPage(page - 1)}
+        disabled={page === 0}
+      >
+        Previous
+      </button>
+      <span className="mx-1">
+        Page {page + 1} of {maxPage}
+      </span>
+      <button
+        className="btn btn-primary btn-md"
+        style={{
+          filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+        }}
+        onClick={() => setPage(page + 1)}
+        disabled={page === maxPage - 1}
+      >
+        Next
+      </button>
+      {/* last page with double quote right */}
+      <button
+        className="btn btn-primary btn-md"
+        style={{
+          filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+        }}
+        onClick={() => setPage(maxPage - 1)}
+        disabled={page === maxPage - 1}
+      >
+        {"»"}
+      </button>
+    </div>
+  );
+}
 
 function MainExport() {
+  const _currentNetworkId = Ethers.send("eth_chainId", []);
+  if (!_currentNetworkId) {
+    return (
+      <div className="bg-dark d-flex flex-column align-items-center text-light">
+        <h1>Web3 not connected</h1>
+        <ConnectButton />
+      </div>
+    );
+  }
+  const currentNetworkId =
+    removeLeadingZero(_currentNetworkId || "0x1") || "0x1";
   return (
-    <div>
-      <Web3Connect connectLabel={"Connect to Web3"} />
+    <div className="bg-dark d-flex flex-column align-items-center text-light pt-3">
+      {/* <Web3Connect connectLabel={"Connect to Web3"} /> */}
+      <ConnectButton />
+      {transformedData.balancers[0].poolCount > 10 && <PaginationComponent />}
       <h1>Balancer Pools</h1>
-      <div className="d-flex flex-wrap gap-3">
+      <div className="d-flex flex-wrap gap-3 justify-content-center">
         {transformedData?.pools?.map((pool) => {
           return (
             <Widget
@@ -222,14 +501,15 @@ function MainExport() {
                 pool,
                 // this is an error in the widget, as both stake and unstake are supported in one widget
                 operation: "stake",
-                vaultAddress: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+                vaultAddress: chainInfoObject[currentNetworkId].vaultAddress,
                 balancerQueriesAddress:
-                  "0x1802953277FD955f9a254B80Aa0582f193cF1d77",
+                  chainInfoObject[currentNetworkId].balancerQueriesAddress,
               }}
             />
           );
         })}
       </div>
+      {transformedData.balancers[0].poolCount > 10 && <PaginationComponent />}
     </div>
   );
 }

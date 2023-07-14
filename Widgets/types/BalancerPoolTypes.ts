@@ -15,6 +15,30 @@ declare const Dialog: any;
 declare const state: State;
 declare const Widget: any;
 
+interface ChainInfo {
+  name: string;
+  chainId: string;
+  shortName: string;
+  chain: string;
+  network: string;
+  networkId: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpc: string[];
+  faucets: string[];
+  explorers: string[];
+  vaultAddress: string;
+  balancerQueriesAddress: string;
+  balancerSubgraphUrl: string;
+}
+
+interface ChainInfoObject {
+  [key: string]: ChainInfo;
+}
+
 declare module "Widget" {
   import { ReactNode } from "react";
 

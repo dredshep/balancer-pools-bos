@@ -339,7 +339,7 @@ try {
 }
 
 // if we don't have a chain id yet, try to get it before calling getTransformedData
-if (state.chainId) {
+if (!state.chainId) {
   setTimeout(() => {
     try {
       if (!state.chainId) {
@@ -395,6 +395,16 @@ if (!state.chainId) {
   return (
     <div className="bg-dark d-flex flex-column align-items-center text-light">
       <h1>Web3 not connected</h1>
+      <ConnectButton />
+    </div>
+  );
+}
+
+if (state.chainId && !chainInfoObject[state.chainId]) {
+  // @ts-ignore
+  return (
+    <div className="bg-dark d-flex flex-column align-items-center text-light">
+      <h1>Unsupported network, please switch:</h1>
       <ConnectButton />
     </div>
   );

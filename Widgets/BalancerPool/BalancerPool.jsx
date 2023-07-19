@@ -47,6 +47,8 @@ if (!props.balancerQueriesAddress)
 // @ts-ignore
 if (props.pool && !props.pool.id)
   missingProps.push("pool has no id, check type (TransformedPool)");
+// @ts-ignore
+if (!props.chainId) missingProps.push("chainId (number | string)");
 
 const pool =
   // @ts-ignore
@@ -61,6 +63,11 @@ const VAULT_ADDRESS =
 const BALANCER_QUERIES_ADDRESS =
   // @ts-ignore
   props.balancerQueriesAddress;
+
+/** @type {number | string} */
+const CHAIN_ID =
+  // @ts-ignore
+  props.chainId;
 
 function MissingPropsWarning({ missingProps }) {
   return (
@@ -323,16 +330,31 @@ function MainComponent() {
                 </tbody>
               </table>
             </div>
+            <div className="d-flex justify-content-between">
+              <VerticalPair
+                title="APR"
+                value={
+                  <span style={{ color: "#a75fff" }} className="fs-4">
+                    <Widget
+                      src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/APRText"
+                      props={{
+                        chainId: CHAIN_ID,
+                        poolId: pool.id,
+                      }}
+                    />
+                  </span>
+                }
+                end={false}
+              />
+              <VerticalPair
+                title="Your Balance"
+                value={state.poolBalance}
+                end
+              />
+            </div>
           </div>
           <div className="mt-3 d-flex justify-content-end">
             <div className="d-flex flex-column align-items-end">
-              <div className="d-flex justify-self-end">
-                <VerticalPair
-                  title="Your Balance"
-                  value={state.poolBalance}
-                  end
-                />
-              </div>
               <div className="d-flex justify-content-end gap-3">
                 {/* tiny reload button */}
                 <button

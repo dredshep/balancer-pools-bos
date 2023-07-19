@@ -484,6 +484,12 @@ function PaginationComponent() {
   );
 }
 
+if (transformedData.pools[0] && state.chainId)
+  console.log(
+    "APR MA BOIIII",
+    getApr(state.chainId, transformedData.pools[0].id)?.apr
+  );
+
 function MainExport() {
   const _currentNetworkId = Ethers.send("eth_chainId", []);
   if (!_currentNetworkId) {

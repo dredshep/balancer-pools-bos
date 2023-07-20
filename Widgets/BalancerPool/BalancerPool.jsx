@@ -239,6 +239,7 @@ const unstakeWidgetProps = {
 };
 
 function MainComponent() {
+  console.log("pool.id", pool.id)
   return (
     <div
       key={pool.id}

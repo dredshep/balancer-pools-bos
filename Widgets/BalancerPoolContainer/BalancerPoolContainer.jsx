@@ -4,7 +4,7 @@
 /** @typedef {Object} SToken @property {string} name @property {string} symbol @property {string} address @property {number} decimals @property {string} totalBalanceUSD @property {string} totalBalanceNotional @property {string} totalVolumeUSD @property {string} totalVolumeNotional @property {string | null} latestUSDPrice @property {SLatestPrice | null} latestPrice */
 /** @typedef {Object} SLatestPrice @property {string} pricingAsset @property {string} price @property {SPoolId} poolId */
 /** @typedef {Object} SPoolId @property {string} totalWeight */
-/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
+/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} totalLiquidity @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
 /** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
 /** @typedef {Object} TokenWeights @property {string} address @property {number} weight */
 /** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
@@ -117,12 +117,29 @@ function getGraphQlQuerySync(query) {
 }
 
 /**
+ * @name getOnlyPoolIds
+ * @description Get only the pool IDs from the Balancer subgraph
+ * @returns {{ pools: { id: string }[] }}
+ * @example const poolIds = getOnlyPoolIds();
+ * console.log(poolIds);
+ */
+function getOnlyPoolIds() {
+  const query = `{
+    pools( where: { totalLiquidity_gt: 0 } ) {
+      id
+    }
+  }`;
+  const data = getGraphQlQuerySync(query);
+  return data;
+}
+
+/**
  * @name runAllInOneQuery
  * @description Get the pool data from the Balancer subgraph
  * @returns {SBalancerGQLResponse}
  * @example const data = runAllInOneQuery();
  */
-function runAllInOneQuery() {
+function runAllInOneQuery(hideZeroBalances) {
   const page = state.page || 0;
   const query = `{
     balancers(first: 5) {
@@ -130,7 +147,14 @@ function runAllInOneQuery() {
       poolCount
       totalLiquidity
     }
-    pools(first: 10, skip: ${page * 10}) {
+    pools(
+      first: 10,
+      skip: ${page * 10},
+      orderBy: totalLiquidity,
+      orderDirection: desc,
+      # hide zero balance here optionally, only if hideZeroBalances is true
+      ${hideZeroBalances ? "where: { totalLiquidity_gt: 0 }" : ""}
+    ) {
       id
       address
       tokensList
@@ -139,6 +163,7 @@ function runAllInOneQuery() {
       holdersCount
       poolType
       poolTypeVersion
+      totalLiquidity
       tokens {
         token {
           name
@@ -168,6 +193,32 @@ function runAllInOneQuery() {
 }
 
 /**
+ * @name hexToNumString
+ * @description Convert a hex string to a number string
+ * @param {string} hex - The hex string to convert
+ * @returns {string} The number string
+ * @example const numString = hexToNumString(hex);
+ * console.log(numString);
+ */
+function hexToNumString(hex) {
+  return ethers.BigNumber.from(hex).toString();
+}
+
+/**
+ * @param {string} chainId
+ * @param {string} poolId
+ * @returns {APRApiResponse | undefined}
+ */
+const getAPIData = (chainId, poolId) => {
+  const url = `https://api.balancer.fi/pools/${hexToNumString(
+    chainId
+  )}/${poolId}`;
+  // @ts-ignore
+  const res = fetch(url).body;
+  return res;
+};
+
+/**
  * @name getTransformedData
  * @description Get the transformed data from the Balancer subgraph data and the calculations
  * @returns {TransformedData}
@@ -176,11 +227,33 @@ function runAllInOneQuery() {
  */
 
 function getTransformedData() {
-  const data = runAllInOneQuery();
+  const data = runAllInOneQuery(!state.showZeroLiquidity);
   /** @type {TransformedPool[]} */
+  if (!data?.pools?.map) return { balancers: [], pools: [] };
   const transformedPools = data.pools.map((pool) => {
-    const totalValueLocked = calculateTotalValueLocked(pool).str;
+    const poolId = pool?.id;
+    const chainId = state?.chainId || "0x1";
+    const aprRes = getAPIData(chainId, poolId);
+
+    const graphLiquidity = pool.totalLiquidity;
+    const apiLiquidity = aprRes?.totalLiquidity;
+    const totalValueLocked = formatAndAbbreviateNumber(
+      apiLiquidity
+        ? parseFloat(apiLiquidity)
+        : graphLiquidity
+        ? parseFloat(graphLiquidity)
+        : 0
+    );
+
     const tokenWeights = calculateTokenWeights(pool);
+    // const tokenWeights = pool.tokens.map((_token) => {
+    //   const { token } = _token;
+    //   const weight = parseFloat(token.totalBalanceUSD);
+    //   return {
+    //     address: token.address,
+    //     weight,
+    //   };
+    // });
     const flattenedTokens = pool.tokens.map((_token) => {
       const { token } = _token;
       return token;
@@ -212,11 +285,21 @@ function getTransformedData() {
  * @property {string | undefined} userAddress - The user's address
  * @property {string | undefined} chainId - The chain ID
  * @property {number} page - The current page
+ * @property {boolean} forceMaxPage - Whether to force the max page
+ * @property {number} forcedMaxPage - The forced max page
+ * @property {boolean} showZeroLiquidity - Whether to hide pools with zero liquidity
  */
-State.init({ userAddress: undefined, chainId: undefined, page: 0 });
+State.init({
+  userAddress: undefined,
+  chainId: undefined,
+  page: 0,
+  forceMaxPage: false,
+  forcedMaxPage: 0,
+  showZeroLiquidity: false,
+});
 
 /**@type {string | undefined} */
-const userAddress = Ethers.send("eth_requestAccounts", [])[0];
+const userAddress = Ethers?.send?.("eth_requestAccounts", [])?.[0];
 if (userAddress) State.update({ userAddress });
 
 /** @type {ChainInfoObject} */
@@ -427,12 +510,38 @@ if (
   );
 }
 
-function PaginationComponent() {
+// loading component with rotating icon and a big loading text
+function LoadingComponent() {
+  return (
+    <div className="d-flex flex-column align-items-center text-light">
+      <h1>Loading...</h1>
+      <div className="spinner-border text-light" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  );
+}
+function PaginationComponent({ forceMaxPage, forcedMaxPage }) {
+  if (typeof transformedData?.balancers?.length !== "number")
+    return <LoadingComponent />;
+  forceMaxPage = forceMaxPage || false;
+  forcedMaxPage = forcedMaxPage || 0;
   const page = state.page;
+  if (typeof page !== "number") return undefined;
   const setPage = (newPage) => {
     State.update({ page: newPage });
   };
-  const maxPage = Math.ceil(transformedData.balancers[0].poolCount / 10);
+  // const poolCount = state.showZeroLiquidity
+  //   ? Math.ceil(transformedData.balancers[0].poolCount / 10)
+  //   : poolIds.length;
+  const bPoolCountDividedBy10 = Math.ceil(
+    transformedData.balancers[0].poolCount / 10
+  );
+  // const filteredPoolCountDividedBy10 = Math.ceil(poolIds.length / 10);
+  // const maxPage = state.showZeroLiquidity
+  //   ? bPoolCountDividedBy10
+  //   : filteredPoolCountDividedBy10;
+  const maxPage = forceMaxPage ? forcedMaxPage : bPoolCountDividedBy10;
   return (
     <div className="d-flex justify-content-center mb-3 align-items-center gap-2">
       {/* first page with double quote left */}
@@ -484,15 +593,11 @@ function PaginationComponent() {
   );
 }
 
-if (transformedData.pools[0] && state.chainId)
-  console.log(
-    "APR MA BOIIII",
-    getApr(state.chainId, transformedData.pools[0].id)?.apr
-  );
+let forceMaxPage = false;
+let forcedMaxPage = 0;
 
 function MainExport() {
-  const _currentNetworkId = Ethers.send("eth_chainId", []);
-  if (!_currentNetworkId) {
+  if (!state.chainId) {
     return (
       <div className="bg-dark d-flex flex-column align-items-center text-light">
         <h1>Web3 not connected</h1>
@@ -500,14 +605,73 @@ function MainExport() {
       </div>
     );
   }
-  const currentNetworkId =
-    removeLeadingZero(_currentNetworkId || "0x1") || "0x1";
+  const chainId = state.chainId || "0x1";
+  // if transformedData?.pools is an empty array, set the page to previous page until we get a non-empty array
+  if (
+    transformedData?.pools?.length === 0 &&
+    transformedData?.balancers?.length !== 0
+  ) {
+    const page = state.page;
+    if (typeof page !== "number") return <LoadingComponent />;
+    if (page > 0) {
+      State.update({ page: page - 1 });
+    }
+  }
+  if (
+    transformedData?.pools?.length < 10 &&
+    transformedData?.balancers?.length > 0
+  ) {
+    State.update({ forceMaxPage: true });
+    // we've reached the end of the list, so this is the max page
+    State.update({ forcedMaxPage: state.page + 1 });
+  }
+  // if (transformedData?.pools?.length === 10) {
+  //   State.update({ forceMaxPage: false });
+  //   State.update({ forcedMaxPage: 0 });
+  // }
   return (
     <div className="bg-dark d-flex flex-column align-items-center text-light pt-3">
-      {/* <Web3Connect connectLabel={"Connect to Web3"} /> */}
       <ConnectButton />
-      {transformedData.balancers[0].poolCount > 10 && <PaginationComponent />}
-      <h1>Balancer Pools</h1>
+      {transformedData.balancers[0].poolCount > 10 ? (
+        <PaginationComponent
+          forceMaxPage={state.forceMaxPage}
+          forcedMaxPage={state.forcedMaxPage}
+        />
+      ) : (
+        <div className="mb-3 mt-1 text-center text-light fs-5 fw-bold">
+          <LoadingComponent />
+        </div>
+      )}
+      {/* toggle to see if user wants to hide pools that have zero liquidity, light switch type right left */}
+      <div className="form-check form-switch mb-3">
+        <input
+          className={
+            "form-check-input fs-4" +
+            (state.showZeroLiquidity ? "" : " bg-secondary")
+          }
+          style={{
+            filter: "hue-rotate(40deg) saturate(80%) brightness(115%)",
+            cursor: "pointer",
+          }}
+          type="checkbox"
+          id="flexSwitchCheckDefault"
+          checked={state.showZeroLiquidity}
+          onChange={() => {
+            State.update({ showZeroLiquidity: !state.showZeroLiquidity });
+            State.update({ page: 0 });
+            State.update({ forceMaxPage: false });
+            State.update({ forcedMaxPage: 0 });
+          }}
+        />
+        <label
+          className="form-check-label fs-5 mt-1 ms-1"
+          htmlFor="flexSwitchCheckDefault"
+        >
+          Show pools with zero liquidity
+        </label>
+      </div>
+
+      <h1 className="mt-3">Balancer Pools</h1>
       <div className="d-flex flex-wrap gap-3 justify-content-center">
         {transformedData?.pools?.map((pool) => {
           return (
@@ -517,15 +681,21 @@ function MainExport() {
                 pool,
                 // this is an error in the widget, as both stake and unstake are supported in one widget
                 operation: "stake",
-                vaultAddress: chainInfoObject[currentNetworkId].vaultAddress,
+                vaultAddress: chainInfoObject[chainId].vaultAddress,
                 balancerQueriesAddress:
-                  chainInfoObject[currentNetworkId].balancerQueriesAddress,
+                  chainInfoObject[chainId].balancerQueriesAddress,
+                chainId: chainId,
               }}
             />
           );
         })}
       </div>
-      {transformedData.balancers[0].poolCount > 10 && <PaginationComponent />}
+      {transformedData.balancers[0].poolCount > 10 && (
+        <PaginationComponent
+          forceMaxPage={state.forceMaxPage}
+          forcedMaxPage={state.forcedMaxPage}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,116 @@
+
+                <div className="bg-dark border-2 border-secondary rounded-3 shadow p-3 border-bottom">
+                  {/* title bar with close button */}
+                  <div className="d-flex justify-content-between p-2 align-items-center">
+                    <div>
+                      <h5 className="text-light fw-bold">Pool Details</h5>
+                    </div>
+                    <div>
+                      <Popover.Close className="btn btn-sm">
+                        <i className="bi bi-x-lg text-secondary"></i>
+                      </Popover.Close>
+                    </div>
+                  </div>
+
+                  <div className="d-flex justify-content-between p-2 text-light fw-bold rounded-top align-items-center">
+                    <div>
+                      {/* 2x2 grid with some info like amount of holders, pool type, token composition (weights) */}
+                      <div className="col-md-6">
+                        <VerticalPair
+                          end={false}
+                          title="Amount of Holders"
+                          value={`${pool.holdersCount}`}
+                        />
+                        <table
+                          className="table table-sm table-transparent text-light border-secondary"
+                          style={{
+                            // max size is like 150px
+                            maxWidth: "200px",
+                            marginTop: "-0.25rem",
+                          }}
+                        >
+                          <thead>
+                            <tr>
+                              <th className="fw-bold">Token</th>
+                              <th className="fw-bold">Weight</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pool.tokens.map((t) => (
+                              <tr key={t.symbol}>
+                                <td
+                                  title={
+                                    "1 " +
+                                    t.name +
+                                    " is worth $" +
+                                    parseFloat(t.latestUSDPrice || "0").toFixed(
+                                      2
+                                    )
+                                  }
+                                >
+                                  {t.symbol}
+                                </td>
+                                <td
+                                  title={
+                                    (
+                                      parseFloat(t.totalBalanceNotional) /
+                                      Number("1e" + t.decimals)
+                                    ).toFixed(2) +
+                                    " " +
+                                    t.symbol
+                                  }
+                                >
+                                  {pool.tokenWeights.find(
+                                    (w) => w.address === t.address
+                                  )
+                                    ? `${
+                                        (pool?.tokenWeights?.find(
+                                          (w) => w.address === t.address
+                                        )?.weight ?? 0) * 100
+                                      }%`
+                                    : "N/A"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="d-flex justify-content-end gap-3">
+                    {state.refreshTick >= 0 && (
+                      <div className="d-flex gap-3">
+                        <button
+                          className="btn btn-sm btn-outline-secondary fs-5 pt-2"
+                          onClick={() => {
+                            getUserBalanceOnceAndUpdateState(
+                              pool.address,
+                              userAddress
+                            );
+                            State.update({
+                              refreshTick: state.refreshTick + 1,
+                            });
+                          }}
+                        >
+                          <i className="bi bi-arrow-clockwise"></i>
+                        </button>
+                        {/* <Web3Connect /> */}
+                        <Widget
+                          src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeButtonAndForm"
+                          props={{ ...unstakeWidgetProps }}
+                          key={(state.refreshTick + 1).toString()}
+                        />
+                        <Widget
+                          src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/StakeUnstakeButtonAndForm"
+                          props={{ ...stakeWidgetProps }}
+                          key={(state.refreshTick + 2).toString()}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* <Popover.Arrow
+                    style={{
+                      fill: "var(--bs-secondary)",
+                    }}
+                  /> */}
+                </div>

@@ -744,8 +744,6 @@ function MainExport() {
             <table
               className="table table-sm table-transparent text-light"
               style={{
-                // max size is like 150px
-                maxWidth: "min-content",
                 marginTop: "-0.25rem",
               }}
             >

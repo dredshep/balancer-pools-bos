@@ -114,6 +114,30 @@ if (missingProps.length) {
   return <MissingPropsWarning missingProps={missingProps} />;
 }
 
+/**
+ * Formats and abbreviates a number with a suffix based on its magnitude.
+ * @param {number} num - The number to format and abbreviate.
+ * @returns {string} The formatted and abbreviated number with a suffix.
+ */
+function formatAndAbbreviateNumber(num) {
+  let counter = 0;
+  const abbreviations = ["", "K", "M", "B", "T", "Quadrillion", "Quintillion"];
+
+  while (num >= 1000) {
+    num /= 1000;
+    counter++;
+  }
+
+  const stringNum = num.toFixed(2);
+
+  // Split number into integer and decimal parts
+  let parts = Number(stringNum).toString().split(".");
+  // Add commas every three digits to the integer part
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  return parts.join(".") + abbreviations[counter];
+}
+
 const userAddress = Ethers.send("eth_requestAccounts", [])[0];
 State.update({ userAddress });
 
@@ -392,7 +416,7 @@ function CoolTr() {
           }}
         />
       </td>
-      <td>{pool.totalValueLocked}</td>
+      <td>${pool.totalValueLocked}</td>
       <td>
         {stringNumToFixed2(state.poolBalance) ?? "-"}
         {state.poolBalance ? "BPT" : ""}
@@ -473,7 +497,7 @@ function CoolTr() {
                   />
                 </div>
                 <div className="col-md-6">
-                  <VerticalPair
+                  {/* <VerticalPair
                     end={false}
                     title="Token Balance"
                     value={pool.tokens.reduce(
@@ -484,6 +508,11 @@ function CoolTr() {
                           ) || 0,
                       0
                     )}
+                  /> */}
+                  <VerticalPair
+                    end={false}
+                    title="Pool Type"
+                    value={`${pool.poolType} ${pool.poolTypeVersion}`}
                   />
                   <VerticalPair
                     end={false}
@@ -521,7 +550,7 @@ function CoolTr() {
                         <tr className="border-secondary">
                           <th className="fw-bold">Token</th>
                           <th className="fw-bold">Weight</th>
-                          <th className="fw-bold">Balance</th>
+                          <th className="fw-bold">Amount</th>
                           <th className="fw-bold">USD&nbsp;Price</th>
                         </tr>
                       </thead>
@@ -541,7 +570,12 @@ function CoolTr() {
                                 : "N/A"}
                             </td>
                             <td key={"balance" + t.address + state.refreshTick}>
-                              {stringNumToFixed2(t.totalBalanceNotional)}
+                              {formatAndAbbreviateNumber(
+                                parseFloat(
+                                  stringNumToFixed2(t.totalBalanceNotional) ??
+                                    "0"
+                                )
+                              )}
                             </td>
                             <td key={"price" + t.address + state.refreshTick}>
                               ${parseFloat(t.latestUSDPrice || "0").toFixed(2)}

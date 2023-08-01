@@ -7,7 +7,7 @@
 /** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
 /** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
 /** @typedef {Object} TokenWeights @property {string} address @property {number} weight */
-/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
+/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens @property {string} owner @property {number} createTime*/
 /** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
 /** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
 /** @typedef {Object} PoolAndBalance @property {string} poolAddress @property {string | undefined} balance */
@@ -54,6 +54,12 @@ if (!props.balancerQueriesAddress)
 // @ts-ignore
 if (props.pool && !props.pool.id)
   missingProps.push("pool has no id, check type (TransformedPool)");
+// @ts-ignore
+if (props.pool && !props.pool.owner)
+  missingProps.push("pool has no owner, check type (TransformedPool)");
+// @ts-ignore
+if (props.pool && !props.pool.createTime)
+  missingProps.push("pool has no createTime, check type (TransformedPool)");
 // @ts-ignore
 if (!props.chainId) missingProps.push("chainId (number | string)");
 
@@ -331,8 +337,12 @@ function stringNumToFixed2(stringNum) {
   return stringNum === undefined ? undefined : parseFloat(stringNum).toFixed(2);
 }
 
+/**
+ * Converts Unix timestamp to ISO date format.
+ * @param {number} unixTime - Unix timestamp in seconds.
+ * @returns {string} - ISO date format string (yyyy-mm-dd). Example: "2021-01-23"
+ */
 function unixTimeToISO(unixTime) {
-  // 23-07-10 (year, month, day)
   return new Date(unixTime * 1000).toISOString().slice(0, 10);
 }
 
@@ -608,51 +618,54 @@ function CoolTr() {
   );
 }
 
-function Table() {
-  return (
-    <PrettyTable>
-      <table className="table table-sm table-transparent text-light bg-dark">
-        <thead>
-          <tr>
-            <th className="fw-bold">
-              <div className="d-flex">
-                <i className="bi bi-circle-fill text-secondary"></i>
-                <i
-                  className="bi bi-circle-fill text-secondary"
-                  style={{ marginLeft: "-7px" }}
-                ></i>
-                <i
-                  className="bi bi-circle-fill text-secondary"
-                  style={{ marginLeft: "-7px" }}
-                ></i>
-              </div>
-            </th>
-            <th className="fw-bold">Tokens</th>
-            <th className="fw-bold">APR</th>
-            <th className="fw-bold">Pool value</th>
-            <th className="fw-bold">Your balance</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <CoolTr />
-          <CoolTr />
-          <CoolTr />
-          <CoolTr />
-        </tbody>
-      </table>
-    </PrettyTable>
-  );
-}
+// function Table() {
+//   return (
+//     <PrettyTable>
+//       <table className="table table-sm table-transparent text-light bg-dark">
+//         <thead>
+//           <tr>
+//             <th className="fw-bold">
+//               <div className="d-flex">
+//                 <i className="bi bi-circle-fill text-secondary"></i>
+//                 <i
+//                   className="bi bi-circle-fill text-secondary"
+//                   style={{ marginLeft: "-7px" }}
+//                 ></i>
+//                 <i
+//                   className="bi bi-circle-fill text-secondary"
+//                   style={{ marginLeft: "-7px" }}
+//                 ></i>
+//               </div>
+//             </th>
+//             <th className="fw-bold">Tokens</th>
+//             <th className="fw-bold">APR</th>
+//             <th className="fw-bold">Pool value</th>
+//             <th className="fw-bold">Your balance</th>
+//             <th></th>
+//           </tr>
+//         </thead>
+//         <tbody>
+//           <CoolTr />
+//           <CoolTr />
+//           <CoolTr />
+//           <CoolTr />
+//         </tbody>
+//       </table>
+//     </PrettyTable>
+//   );
+// }
 
-function MainComponent() {
-  return (
-    <div>
-      <Web3Connect />
-      <Table />
-    </div>
-  );
-}
+// function MainComponent() {
+//   return (
+//     <div>
+//       <Web3Connect />
+//       <Table />
+//     </div>
+//   );
+// }
+
+// // @ts-ignore
+// return <MainComponent />;
 
 // @ts-ignore
-return <MainComponent />;
+return <CoolTr />;

@@ -4,10 +4,10 @@
 /** @typedef {Object} SToken @property {string} name @property {string} symbol @property {string} address @property {number} decimals @property {string} totalBalanceUSD @property {string} totalBalanceNotional @property {string} totalVolumeUSD @property {string} totalVolumeNotional @property {string | null} latestUSDPrice @property {SLatestPrice | null} latestPrice */
 /** @typedef {Object} SLatestPrice @property {string} pricingAsset @property {string} price @property {SPoolId} poolId */
 /** @typedef {Object} SPoolId @property {string} totalWeight */
-/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} totalLiquidity @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens */
+/** @typedef {Object} SPool @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} totalLiquidity @property {string} poolType @property {number} poolTypeVersion @property {{ token: SToken }[]} tokens @property {string} owner @property {number} createTime*/
 /** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
 /** @typedef {Object} TokenWeights @property {string} address @property {number} weight */
-/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens */
+/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights[]} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens @property {string} owner @property {number} createTime*/
 /** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
 /** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
 /** @typedef {Object} PoolAndBalance @property {string} poolAddress @property {string | undefined} balance */
@@ -164,6 +164,8 @@ function runAllInOneQuery(hideZeroBalances) {
       poolType
       poolTypeVersion
       totalLiquidity
+      owner
+      createTime
       tokens {
         token {
           name
@@ -263,6 +265,7 @@ function getTransformedData() {
       const bBalance = parseFloat(b.totalBalanceUSD);
       return bBalance - aBalance;
     });
+    const owner = pool.owner ?? "0x0000000000000000000000000000000000000000";
 
     // fill in the rest of the data
     return {
@@ -270,6 +273,7 @@ function getTransformedData() {
       tokens,
       totalValueLocked,
       tokenWeights,
+      owner,
     };
   });
   /** @type {TransformedData} */
@@ -531,16 +535,9 @@ function PaginationComponent({ forceMaxPage, forcedMaxPage }) {
   const setPage = (newPage) => {
     State.update({ page: newPage });
   };
-  // const poolCount = state.showZeroLiquidity
-  //   ? Math.ceil(transformedData.balancers[0].poolCount / 10)
-  //   : poolIds.length;
   const bPoolCountDividedBy10 = Math.ceil(
     transformedData.balancers[0].poolCount / 10
   );
-  // const filteredPoolCountDividedBy10 = Math.ceil(poolIds.length / 10);
-  // const maxPage = state.showZeroLiquidity
-  //   ? bPoolCountDividedBy10
-  //   : filteredPoolCountDividedBy10;
   const maxPage = forceMaxPage ? forcedMaxPage : bPoolCountDividedBy10;
   return (
     <div className="d-flex justify-content-center mb-3 align-items-center gap-2">
@@ -595,6 +592,57 @@ function PaginationComponent({ forceMaxPage, forcedMaxPage }) {
 
 let forceMaxPage = false;
 let forcedMaxPage = 0;
+
+const breakpoint = 500;
+
+const DesktopOnly = styled.div`
+  @media (max-width: ${breakpoint}px) {
+    display: none;
+  }
+`;
+
+const MobileOnly = styled.div`
+  @media (min-width: ${breakpoint}px) {
+    display: none;
+  }
+`;
+
+const PrettyTable = styled.div`
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+    border-radius: 20px; /* rounded corners */
+    overflow: hidden; /* for rounded corners */
+    background: #333; /* dark mode */
+    color: #fff; /* text color */
+
+    th,
+    td {
+      padding: 16px;
+    }
+    thead tr {
+      background-color: #222; /* dark grey */
+      text-align: left;
+      /*&:hover {
+        background: #1f1f1f; /* hover effect */
+      }*/
+    }
+    tbody 
+    tbody tr:nth-child(odd) {
+      background-color: #333; /* alternate row color */
+      /*&:hover {
+        background: #2f2f2f; /* hover effect */
+      }*/
+    }
+    tbody tr:nth-child(even) {
+      background-color: #222; /* alternate row color */
+      /*&:hover {
+        background: #1f1f1f; /* hover effect */
+      }*/
+    }
+  }
+`;
 
 function MainExport() {
   if (!state.chainId) {
@@ -673,22 +721,77 @@ function MainExport() {
 
       <h1 className="mt-3">Balancer Pools</h1>
       <div className="d-flex flex-wrap gap-3 justify-content-center">
-        {transformedData?.pools?.map((pool) => {
-          return (
-            <Widget
-              src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/BalancerPool"
-              props={{
-                pool,
-                // this is an error in the widget, as both stake and unstake are supported in one widget
-                operation: "stake",
-                vaultAddress: chainInfoObject[chainId].vaultAddress,
-                balancerQueriesAddress:
-                  chainInfoObject[chainId].balancerQueriesAddress,
-                chainId: chainId,
+        <MobileOnly>
+          {transformedData?.pools?.map((pool) => {
+            return (
+              <Widget
+                src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/BalancerPool"
+                props={{
+                  pool,
+                  // this is an error in the widget, as both stake and unstake are supported in one widget
+                  operation: "stake",
+                  vaultAddress: chainInfoObject[chainId].vaultAddress,
+                  balancerQueriesAddress:
+                    chainInfoObject[chainId].balancerQueriesAddress,
+                  chainId: chainId,
+                }}
+              />
+            );
+          })}
+        </MobileOnly>
+        <DesktopOnly>
+          <PrettyTable>
+            <table
+              className="table table-sm table-transparent text-light"
+              style={{
+                // max size is like 150px
+                maxWidth: "min-content",
+                marginTop: "-0.25rem",
               }}
-            />
-          );
-        })}
+            >
+              <thead>
+                <tr>
+                  <th className="fw-bold">
+                    <div className="d-flex">
+                      <i className="bi bi-circle-fill text-secondary"></i>
+                      <i
+                        className="bi bi-circle-fill text-secondary"
+                        style={{ marginLeft: "-7px" }}
+                      ></i>
+                      <i
+                        className="bi bi-circle-fill text-secondary"
+                        style={{ marginLeft: "-7px" }}
+                      ></i>
+                    </div>
+                  </th>
+                  <th className="fw-bold">Tokens</th>
+                  <th className="fw-bold">APR</th>
+                  <th className="fw-bold">Pool&nbsp;value</th>
+                  <th className="fw-bold">Your&nbsp;balance</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {transformedData?.pools?.map((pool) => {
+                  return (
+                    <Widget
+                      src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/BalancerPoolTableRow"
+                      props={{
+                        pool,
+                        // this is an error in the widget, as both stake and unstake are supported in one widget
+                        operation: "stake",
+                        vaultAddress: chainInfoObject[chainId].vaultAddress,
+                        balancerQueriesAddress:
+                          chainInfoObject[chainId].balancerQueriesAddress,
+                        chainId: chainId,
+                      }}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </PrettyTable>
+        </DesktopOnly>
       </div>
       {transformedData.balancers[0].poolCount > 10 && (
         <PaginationComponent

@@ -437,7 +437,7 @@ function CoolTr() {
               style={{
                 zIndex: "3",
                 backgroundColor: "#393e41",
-                maxWidth: "472px",
+                // maxWidth: "472px",
               }}
             >
               {/* title bar with close button */}
@@ -463,7 +463,7 @@ function CoolTr() {
                   }
                 }
                 // make the flex wrap
-                className="d-flex w-100 gap-5 col-12 p-4"
+                className="d-flex w-100 gap-3 col-12 p-4"
               >
                 {/* <div className="d-flex justify-content-between border-bottom-1 p-2">
             <div className="fw-bold">Amount of Holders</div>
@@ -532,7 +532,7 @@ function CoolTr() {
               <div className="d-flex justify-content-between text-light fw-bold rounded-top align-items-center px-4">
                 <div>
                   {/* 2x2 grid with some info like amount of holders, pool type, token composition (weights) */}
-                  <div className="col-md-6">
+                  <PrettyTable className="col-md-6">
                     {/* <VerticalPair
                 end={false}
                 title="Amount of Holders"
@@ -584,7 +584,7 @@ function CoolTr() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </PrettyTable>
                 </div>
               </div>
               <div className="d-flex justify-content-end gap-3 pb-4 px-4">

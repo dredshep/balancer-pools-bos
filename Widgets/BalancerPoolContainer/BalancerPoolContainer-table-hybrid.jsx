@@ -234,7 +234,8 @@ function getTransformedData() {
     const poolId = pool?.id;
     const chainId = state?.chainId || "0x1";
     const aprRes = getAPIData(chainId, poolId);
-
+    const nestedPools = aprRes?.tokens.map((t) => t.token.pool);
+    // aprRes?.tokens.map(t => t.token.pool?.id === poolId)
     const graphLiquidity = pool.totalLiquidity;
     const apiLiquidity = aprRes?.totalLiquidity;
     const totalValueLocked = formatAndAbbreviateNumber(

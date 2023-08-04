@@ -40,46 +40,15 @@ function formatAndAbbreviateNumber(num) {
 }
 
 /**
- * @name calculateTokenWeights
- * @description Calculate the token weights in a pool
- * @param {SBalancerGQLResponse["pools"][0]} pool
- * @returns {{
- * address: string,
- * weight: number
- * }[]}
- * @example const tokenWeights = calculateTokenWeights(pool);
- * console.log(tokenWeights);
- */
-function calculateTokenWeights(pool) {
-  const totalValueLocked = calculateTotalValueLocked(pool);
-  const getWeight = (
-    /** @type {number} */ value,
-    /** @type {number} */ decimals
-  ) => value / (Number(totalValueLocked.num) * Number("1e" + decimals));
-  const weights = pool.tokens.map((_token) => {
-    const { token } = _token;
-    const floated = parseFloat(token.totalBalanceUSD);
-    const weight = floated === 0 ? 0 : getWeight(floated, token.decimals);
-    return {
-      address: token.address,
-      weight: parseFloat(weight.toFixed(1)),
-      token,
-    };
-  });
-  return weights;
-}
-
-/**
  * @name calculateTotalValueLocked
  * @description Calculate the total value locked in a pool
- * @param {SBalancerGQLResponse["pools"][0]} pool
+ * @param {SToken[]} tokens
  * @returns {{ num: number, str: string }} The total value locked as a number and a string
  * @example const totalValueLocked = calculateTotalValueLocked(pool);
  * console.log(totalValueLocked);
  */
-function calculateTotalValueLocked(pool) {
-  const totalLiquidity = pool.tokens.reduce((acc, _token) => {
-    const { token } = _token;
+function calculateTotalValueLocked(tokens) {
+  const totalLiquidity = tokens.reduce((acc, token) => {
     const usdBalance =
       parseFloat(token.totalBalanceUSD) / Number("1e" + token.decimals);
     if (usdBalance) {
@@ -91,6 +60,35 @@ function calculateTotalValueLocked(pool) {
     num: totalLiquidity,
     str: formatAndAbbreviateNumber(totalLiquidity),
   };
+}
+
+/**
+ * @name calculateTokenWeights
+ * @description Calculate the token weights in a pool
+ * @param {SToken[]} tokens
+ * @returns {{
+ * address: string,
+ * weight: number
+ * }[]}
+ * @example const tokenWeights = calculateTokenWeights(pool, tokens);
+ * console.log(tokenWeights);
+ */
+function calculateTokenWeights(tokens) {
+  const totalValueLocked = calculateTotalValueLocked(tokens);
+  const getWeight = (
+    /** @type {number} */ value,
+    /** @type {number} */ decimals
+  ) => value / (Number(totalValueLocked.num) * Number("1e" + decimals));
+  const weights = tokens.map((token) => {
+    const floated = parseFloat(token.totalBalanceUSD);
+    const weight = floated === 0 ? 0 : getWeight(floated, token.decimals);
+    return {
+      address: token.address,
+      weight: parseFloat(weight.toFixed(1)),
+      token,
+    };
+  });
+  return weights;
 }
 
 // const zkEVMGraphQLUri =
@@ -246,25 +244,27 @@ function getTransformedData() {
         ? parseFloat(graphLiquidity)
         : 0
     );
-
-    const tokenWeights = calculateTokenWeights(pool);
-    // const tokenWeights = pool.tokens.map((_token) => {
-    //   const { token } = _token;
-    //   const weight = parseFloat(token.totalBalanceUSD);
-    //   return {
-    //     address: token.address,
-    //     weight,
-    //   };
-    // });
-    const flattenedTokens = pool.tokens.map((_token) => {
-      const { token } = _token;
-      return token;
-    });
-    const tokens = flattenedTokens.sort((a, b) => {
+    const flattenTokens = ({ token }) => token;
+    const flattenedTokens = pool.tokens.map(flattenTokens);
+    const sortedTokens = flattenedTokens.sort((a, b) => {
       const aBalance = parseFloat(a.totalBalanceUSD);
       const bBalance = parseFloat(b.totalBalanceUSD);
       return bBalance - aBalance;
     });
+    const filteredTokens = sortedTokens.filter(
+      (token) => token.address !== pool.address
+    );
+    const tokensList = pool.tokensList.filter(
+      (token) => token !== pool.address
+    );
+    const tokens = filteredTokens;
+    console.log({
+      flattenedTokens,
+      sortedTokens,
+      filteredTokens,
+      tokens,
+    });
+    const tokenWeights = calculateTokenWeights(tokens);
     const owner = pool.owner ?? "0x0000000000000000000000000000000000000000";
 
     // fill in the rest of the data
@@ -273,6 +273,7 @@ function getTransformedData() {
       tokens,
       totalValueLocked,
       tokenWeights,
+      tokensList,
       owner,
     };
   });

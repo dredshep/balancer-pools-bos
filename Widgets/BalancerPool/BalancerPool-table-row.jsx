@@ -62,6 +62,9 @@ if (props.pool && !props.pool.createTime)
   missingProps.push("pool has no createTime, check type (TransformedPool)");
 // @ts-ignore
 if (!props.chainId) missingProps.push("chainId (number | string)");
+// @ts-ignore
+if (!props.balancerTokens)
+  missingProps.push(`balancerTokens (APRApiResponse["tokens"])`);
 
 /** @type {TransformedPool} */
 const pool =
@@ -82,6 +85,11 @@ const BALANCER_QUERIES_ADDRESS =
 const CHAIN_ID =
   // @ts-ignore
   props.chainId;
+
+/** @type {APRApiResponse["tokens"]} */
+const BALANCER_TOKENS =
+  // @ts-ignore
+  props.balancerTokens;
 
 function MissingPropsWarning({ missingProps }) {
   return (
@@ -538,7 +546,13 @@ function CoolTr() {
                 title="Amount of Holders"
                 value={`${pool.holdersCount}`}
               /> */}
-                    <table
+                    <Widget
+                      src="c74edb82759f476010ce8363e6be15fcb3cfebf9be6320d6cdc3588f1a5b4c0e/widget/BalancerAPITokenTable"
+                      props={{
+                        tokens: BALANCER_TOKENS,
+                      }}
+                    />
+                    {/* <table
                       className="table table-sm table-transparent text-light"
                       style={{
                         // max size is like 150px
@@ -583,7 +597,7 @@ function CoolTr() {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </table> */}
                   </PrettyTable>
                 </div>
               </div>

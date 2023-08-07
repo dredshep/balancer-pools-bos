@@ -8,7 +8,7 @@
 /** @typedef {Object} SBalancerGQLResponse @property {SBalancer[]} balancers @property {SPool[]} pools */
 /** @typedef {Object} _TokenWeights @property {string} address @property {number | null} weight */
 /** @typedef {_TokenWeights[] | undefined} TokenWeights */
-/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights | undefined} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens @property {string} owner @property {number} createTime*/
+/** @typedef {Object} TransformedPool @property {string} totalValueLocked @property {TokenWeights | undefined} tokenWeights @property {string} id @property {string} address @property {string[]} tokensList @property {string} totalWeight @property {string} totalShares @property {string} holdersCount @property {string} poolType @property {number} poolTypeVersion @property {SToken[]} tokens @property {string} owner @property {number} createTime @property {ResultToken[] | undefined} balancerTokens */
 /** @typedef {Object} TransformedData @property {SBalancer[]} balancers @property {TransformedPool[]} pools */
 /** @typedef {Object} StatePool @property {string} id @property {boolean} approved @property {boolean} depositing @property {boolean} withdrawing @property {boolean} approving @property {boolean} loading */
 /** @typedef {Object} PoolAndBalance @property {string} poolAddress @property {string | undefined} balance */
@@ -235,7 +235,7 @@ function getTransformedData() {
     const poolId = pool?.id;
     const chainId = state?.chainId || "0x1";
     const balancerApiRes = getAPIData(chainId, poolId);
-    const balancerTokens = balancerApiRes?.tokens;
+    const _balancerTokens = balancerApiRes?.tokens;
 
     const graphLiquidity = pool.totalLiquidity;
     const apiLiquidity = balancerApiRes?.totalLiquidity;
@@ -254,20 +254,21 @@ function getTransformedData() {
       const bBalance = parseFloat(b.totalBalanceUSD);
       return bBalance - aBalance;
     });
-    const filteredTokens = sortedTokens.filter(
-      (token) => token.address !== pool.address
-    );
+    const tokens = sortedTokens;
+    // const filteredTokens = sortedTokens.filter(
+    //   (token) => token.address !== pool.address
+    // );
     const tokensList = pool.tokensList.filter(
       (token) => token !== pool.address
     );
-    const tokens = filteredTokens;
-    console.log({
-      flattenedTokens,
-      sortedTokens,
-      filteredTokens,
-      tokens,
-    });
-    const tokenWeights = balancerTokens?.map(({ address, weight }, i) =>
+    // const tokens = filteredTokens;
+    // console.log({
+    //   flattenedTokens,
+    //   sortedTokens,
+    //   filteredTokens,
+    //   tokens,
+    // });
+    const tokenWeights = _balancerTokens?.map(({ address, weight }, i) =>
       weight !== null
         ? {
             address,
@@ -275,6 +276,18 @@ function getTransformedData() {
           }
         : calculateTokenWeights(tokens)[i]
     );
+    const balancerTokens = _balancerTokens?.map((t) =>
+      t.weight !== null
+        ? t
+        : {
+            ...t,
+            weight:
+              tokenWeights
+                ?.find(({ address }) => address === t.address)
+                ?.weight?.toString?.() ?? "0",
+          }
+    );
+
     const owner = pool.owner ?? "0x0000000000000000000000000000000000000000";
 
     // fill in the rest of the data
@@ -794,6 +807,7 @@ function MainExport() {
                         balancerQueriesAddress:
                           chainInfoObject[chainId].balancerQueriesAddress,
                         chainId: chainId,
+                        balancerTokens: pool.balancerTokens,
                       }}
                     />
                   );
